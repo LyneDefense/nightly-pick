@@ -4,7 +4,12 @@ server {
 
     client_max_body_size 20m;
 
-    location / {
+    location = /nightly {
+        return 301 /nightly/;
+    }
+
+    location /nightly/ {
+        rewrite ^/nightly/?(.*)$ /$1 break;
         proxy_pass http://127.0.0.1:18081;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
