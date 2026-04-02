@@ -47,6 +47,10 @@ down() {
 
 restart() {
   cd "$DEPLOY_DIR"
+  if [ "${1:-}" = "--force" ]; then
+    docker compose up -d --build --force-recreate
+    return
+  fi
   docker compose restart
 }
 
@@ -85,7 +89,8 @@ case "${1:-help}" in
     down
     ;;
   restart)
-    restart
+    shift || true
+    restart "${1:-}"
     ;;
   logs)
     shift
@@ -110,6 +115,7 @@ case "${1:-help}" in
   up         启动 postgres / agent / server
   down       停止并删除容器
   restart    重启容器
+  restart --force  重新构建并强制重建容器（重新加载 .env）
   logs       查看日志，可追加服务名
   ps         查看容器状态
   pull       拉取最新代码
