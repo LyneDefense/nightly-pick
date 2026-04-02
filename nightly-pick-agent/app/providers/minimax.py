@@ -31,7 +31,7 @@ from app.prompts import (
     REFLECTION_PLANNER_PROMPT,
     REFLECTION_WRITER_PROMPT,
 )
-from app.providers.base import SpeechProvider, TextProvider
+from app.providers.base import SpeechSynthesizeProvider, SpeechTranscribeProvider, TextProvider
 
 logger = logging.getLogger("nightly-pick-agent.minimax")
 
@@ -389,10 +389,10 @@ highlight: string
         return sanitized or content.strip()
 
 
-class MiniMaxSpeechProvider(SpeechProvider):
+class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
     def __init__(self, settings: Settings):
         if not settings.minimax_api_key:
-            raise ValueError("MINIMAX_API_KEY is required when SPEECH_PROVIDER=minimax")
+            raise ValueError("MINIMAX_API_KEY is required when SPEECH_SYNTHESIZE_PROVIDER=minimax or SPEECH_TRANSCRIBE_PROVIDER=minimax")
         self.settings = settings
 
     async def transcribe(self, request: TranscribeAudioRequest) -> TranscribeAudioResponse:

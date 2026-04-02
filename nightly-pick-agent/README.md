@@ -28,20 +28,23 @@ curl http://localhost:8000/health
 ## Provider Modes
 
 - `TEXT_PROVIDER=mock|minimax`
-- `SPEECH_PROVIDER=mock|minimax`
+- `SPEECH_TRANSCRIBE_PROVIDER=mock|minimax|tencent`
+- `SPEECH_SYNTHESIZE_PROVIDER=mock|minimax`
 
 Recommended MVP setup:
 
 ```env
 TEXT_PROVIDER=mock
-SPEECH_PROVIDER=mock
+SPEECH_TRANSCRIBE_PROVIDER=mock
+SPEECH_SYNTHESIZE_PROVIDER=mock
 ```
 
 When you are ready to switch to MiniMax:
 
 ```env
 TEXT_PROVIDER=minimax
-SPEECH_PROVIDER=minimax
+SPEECH_TRANSCRIBE_PROVIDER=tencent
+SPEECH_SYNTHESIZE_PROVIDER=minimax
 MINIMAX_API_KEY=your_key
 TEXT_MODEL=MiniMax-M2.5
 MINIMAX_TTS_MODEL=speech-2.8-turbo

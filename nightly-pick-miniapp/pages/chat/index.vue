@@ -317,10 +317,9 @@ export default {
       this.startRecordingProgress()
       recorderManager.start({
         duration: this.recordingMaxDurationMs,
-        format: "aac",
+        format: "mp3",
         sampleRate: 16000,
         numberOfChannels: 1,
-        encodeBitRate: 96000,
       })
     },
     async stopRecording({ force = false } = {}) {

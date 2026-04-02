@@ -39,11 +39,13 @@ class TextProvider(ABC):
         raise NotImplementedError
 
 
-class SpeechProvider(ABC):
+class SpeechTranscribeProvider(ABC):
     @abstractmethod
     async def transcribe(self, request: TranscribeAudioRequest) -> TranscribeAudioResponse:
         raise NotImplementedError
 
+
+class SpeechSynthesizeProvider(ABC):
     @abstractmethod
     async def synthesize(self, request: SynthesizeSpeechRequest) -> SynthesizeSpeechResponse:
         raise NotImplementedError

@@ -14,7 +14,7 @@ from app.models import (
     TranscribeAudioResponse,
     WriteReflectionRequest,
 )
-from app.providers.base import SpeechProvider, TextProvider
+from app.providers.base import SpeechSynthesizeProvider, SpeechTranscribeProvider, TextProvider
 
 
 class MockTextProvider(TextProvider):
@@ -154,7 +154,7 @@ class MockTextProvider(TextProvider):
         return ExtractMemoryResponse(short_term_memory=memories[:3])
 
 
-class MockSpeechProvider(SpeechProvider):
+class MockSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
     async def transcribe(self, request: TranscribeAudioRequest) -> TranscribeAudioResponse:
         return TranscribeAudioResponse(
             transcript_text=f"这是根据音频 {request.audio_url} 生成的示例转写文本。"

@@ -13,13 +13,19 @@ from app.models import (
     TranscribeAudioResponse,
     WriteReflectionRequest,
 )
-from app.providers.base import SpeechProvider, TextProvider
+from app.providers.base import SpeechSynthesizeProvider, SpeechTranscribeProvider, TextProvider
 
 
 class AgentService:
-    def __init__(self, text_provider: TextProvider, speech_provider: SpeechProvider):
+    def __init__(
+        self,
+        text_provider: TextProvider,
+        speech_transcribe_provider: SpeechTranscribeProvider,
+        speech_synthesize_provider: SpeechSynthesizeProvider,
+    ):
         self.text_provider = text_provider
-        self.speech_provider = speech_provider
+        self.speech_transcribe_provider = speech_transcribe_provider
+        self.speech_synthesize_provider = speech_synthesize_provider
 
     async def reply(self, request: ChatReplyRequest) -> ChatReplyResponse:
         return await self.text_provider.chat_reply(request)
@@ -37,7 +43,7 @@ class AgentService:
         return await self.text_provider.extract_memory(request)
 
     async def transcribe(self, request: TranscribeAudioRequest) -> TranscribeAudioResponse:
-        return await self.speech_provider.transcribe(request)
+        return await self.speech_transcribe_provider.transcribe(request)
 
     async def synthesize(self, request: SynthesizeSpeechRequest) -> SynthesizeSpeechResponse:
-        return await self.speech_provider.synthesize(request)
+        return await self.speech_synthesize_provider.synthesize(request)

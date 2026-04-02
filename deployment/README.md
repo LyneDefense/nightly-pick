@@ -46,16 +46,22 @@ DOMAIN=api.your-domain.com
 POSTGRES_PASSWORD=你的数据库密码
 AUDIO_PUBLIC_BASE_URL=https://你的域名/nightly
 TEXT_PROVIDER=mock
-SPEECH_PROVIDER=mock
+SPEECH_TRANSCRIBE_PROVIDER=mock
+SPEECH_SYNTHESIZE_PROVIDER=mock
 ```
 
-如果你要用 MiniMax，再补：
+如果你要用 `MiniMax 文本 + 腾讯云 ASR + MiniMax TTS`，推荐改成：
 
 ```env
 TEXT_PROVIDER=minimax
-SPEECH_PROVIDER=minimax
+SPEECH_TRANSCRIBE_PROVIDER=tencent
+SPEECH_SYNTHESIZE_PROVIDER=minimax
 MINIMAX_API_KEY=your_key
 MINIMAX_TTS_VOICE_ID="Chinese (Mandarin)_Warm_Bestie"
+TENCENT_ASR_SECRET_ID=your_secret_id
+TENCENT_ASR_SECRET_KEY=your_secret_key
+TENCENT_ASR_REGION=ap-shanghai
+TENCENT_ASR_ENGINE_TYPE=16k_zh
 ```
 
 ## 启动服务
