@@ -89,5 +89,5 @@ Tests use H2 in PostgreSQL compatibility mode with the same Flyway scripts.
 - `POST /me/clear-memories`
 - `POST /me/clear-history`
 - `GET /memories`
-- `POST /audio/upload`
+- `POST /audio/upload` (`multipart/form-data`, fields: `sessionId`, `file`)
 - `POST /audio/transcribe`

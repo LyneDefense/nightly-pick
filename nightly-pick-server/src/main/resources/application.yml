@@ -26,6 +26,10 @@ server:
 agent:
   base-url: ${AGENT_BASE_URL:http://localhost:8000}
 
+audio:
+  storage-dir: ${AUDIO_STORAGE_DIR:./data/audio}
+  public-base-url: ${AUDIO_PUBLIC_BASE_URL:http://localhost:8080}
+
 business-day:
   reset-hour: ${BUSINESS_DAY_RESET_HOUR:6}
 

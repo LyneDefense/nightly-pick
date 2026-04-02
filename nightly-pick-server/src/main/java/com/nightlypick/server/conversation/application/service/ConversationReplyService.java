@@ -85,12 +85,14 @@ public class ConversationReplyService {
                 reply.replyText().length());
         conversationSessionStore.addMessage(sessionId, "assistant", "text", reply.replyText());
         String assistantAudioUrl = null;
-        try {
-            AgentSynthesizeSpeechResponse speech = agentClient.synthesizeSpeech(new AgentSynthesizeSpeechRequest(reply.replyText(), null));
-            assistantAudioUrl = speech.audioUrl();
-            log.info("助手语音合成成功 sessionId={} hasAudioUrl={}", sessionId, assistantAudioUrl != null && !assistantAudioUrl.isBlank());
-        } catch (RuntimeException error) {
-            log.warn("助手语音合成失败 sessionId={}", sessionId, error);
+        if ("voice".equalsIgnoreCase(inputType)) {
+            try {
+                AgentSynthesizeSpeechResponse speech = agentClient.synthesizeSpeech(new AgentSynthesizeSpeechRequest(reply.replyText(), null));
+                assistantAudioUrl = speech.audioUrl();
+                log.info("助手语音合成成功 sessionId={} hasAudioUrl={}", sessionId, assistantAudioUrl != null && !assistantAudioUrl.isBlank());
+            } catch (RuntimeException error) {
+                log.warn("助手语音合成失败 sessionId={}", sessionId, error);
+            }
         }
         log.info("用户消息处理完成 sessionId={} elapsedMs={}", sessionId, System.currentTimeMillis() - startedAt);
         return new SendMessageResponse(sessionId, request.text(), reply.replyText(), assistantAudioUrl, reply.shouldEnd(), reply.stage());

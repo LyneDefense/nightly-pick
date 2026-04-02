@@ -1,7 +1,7 @@
 package com.nightlypick.server.audio.api;
 
-public record AudioUploadRequest(
+public record AudioTranscribeRequest(
         String sessionId,
-        String fileName
+        String audioUrl
 ) {
 }

@@ -44,6 +44,7 @@ cp deployment/.env.example deployment/.env
 ```env
 DOMAIN=api.your-domain.com
 POSTGRES_PASSWORD=你的数据库密码
+AUDIO_PUBLIC_BASE_URL=https://你的域名/nightly
 TEXT_PROVIDER=mock
 SPEECH_PROVIDER=mock
 ```
@@ -54,6 +55,7 @@ SPEECH_PROVIDER=mock
 TEXT_PROVIDER=minimax
 SPEECH_PROVIDER=minimax
 MINIMAX_API_KEY=your_key
+MINIMAX_TTS_VOICE_ID="Chinese (Mandarin)_Warm_Bestie"
 ```
 
 ## 启动服务

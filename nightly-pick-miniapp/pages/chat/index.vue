@@ -6,8 +6,7 @@
         <text class="chat-status">正在记录...</text>
         <text v-if="inputMode === 'text'" class="chat-brand">夜拾</text>
       </view>
-      <button v-if="inputMode === 'text'" class="finish-button" :disabled="loading" @click="handleComplete">完成</button>
-      <view v-else class="topbar-spacer"></view>
+      <button class="finish-button" :disabled="loading || !userHasSpoken" @click="handleComplete">完成</button>
     </view>
 
     <scroll-view class="chat-scroll" scroll-y :scroll-into-view="scrollTarget" scroll-with-animation>
@@ -19,7 +18,7 @@
           :class="['message-wrap', message.role]"
         >
           <view :class="['message-bubble', bubbleClass(message)]">
-            <view v-if="message.role === 'user' && inputMode === 'text'" class="transcript-label">语音已转录</view>
+            <view v-if="message.role === 'user' && message.inputType === 'voice'" class="transcript-label">语音已转录</view>
             <text class="message-copy">{{ message.text }}</text>
           </view>
           <text class="message-time">{{ message.timeLabel || defaultTime }}</text>
@@ -47,9 +46,14 @@
         </view>
       </button>
       <view class="voice-center">
-        <button class="mic-button" @touchstart.prevent="startRecording" @touchend.prevent="stopRecording">
-          <text class="mic-icon">●</text>
-        </button>
+        <view class="voice-record-stack">
+          <view class="recording-hint">{{ recordingHint }}</view>
+          <view class="mic-progress-ring" :style="recordingRingStyle">
+            <button class="mic-button" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
+              <text class="mic-icon">{{ isRecording ? recordingCountdownLabel : "●" }}</text>
+            </button>
+          </view>
+        </view>
       </view>
       <view class="voice-right-placeholder"></view>
     </view>
@@ -91,13 +95,17 @@ import { showError, showSuccess } from "../../utils/ui"
 
 let recorderManager = null
 let autosaveTimer = null
+let recordingProgressTimer = null
+let assistantAudioContext = null
 
 export default {
   data() {
     return {
       loading: false,
       isRecording: false,
-      recordingHint: "",
+      recordingHint: "长按说话，最多 20 秒",
+      recordingElapsedMs: 0,
+      recordingMaxDurationMs: 20000,
       recorderReady: false,
       autoSavePending: false,
       defaultTime: "22:14",
@@ -129,6 +137,19 @@ export default {
     messages() {
       return this.state.chatState.messages
     },
+    recordingProgressPercent() {
+      return Math.min(100, Math.round((this.recordingElapsedMs / this.recordingMaxDurationMs) * 100))
+    },
+    recordingRingStyle() {
+      const percent = this.recordingProgressPercent
+      return {
+        background: `conic-gradient(#21473d 0 ${percent}%, rgba(33, 71, 61, 0.12) ${percent}% 100%)`,
+      }
+    },
+    recordingCountdownLabel() {
+      const remainingMs = Math.max(0, this.recordingMaxDurationMs - this.recordingElapsedMs)
+      return `${Math.max(1, Math.ceil(remainingMs / 1000))}`
+    },
     userHasSpoken: {
       get() {
         return this.state.conversationDraft.userHasSpoken
@@ -150,6 +171,8 @@ export default {
     this.initializePage()
   },
   async onUnload() {
+    this.stopRecording({ force: true })
+    this.stopAssistantAudio()
     await this.tryAutoSaveConversation({ force: true })
     if (autosaveTimer) {
       clearTimeout(autosaveTimer)
@@ -178,23 +201,34 @@ export default {
       if (this.recorderReady) return
       recorderManager = uni.getRecorderManager()
       recorderManager.onStop(async (result) => {
+        this.finishRecordingSession()
         try {
-          const fileName = result.tempFilePath.split("/").pop() || "voice-note.mp3"
+          if (!result || !result.tempFilePath) {
+            throw new Error("没有拿到录音文件")
+          }
           await this.ensureSession()
-          await uploadAudio(this.sessionId, fileName)
-          const transcript = await transcribeAudio(this.sessionId, fileName)
-          this.inputValue = transcript.transcriptText
-          this.inputMode = "text"
-          if (this.inputValue.trim()) {
-            await this.handleSend("voice")
+          this.recordingHint = "正在整理这段语音..."
+          const uploaded = await uploadAudio(this.sessionId, result.tempFilePath)
+          const transcript = await transcribeAudio(this.sessionId, uploaded.audioUrl)
+          const transcriptText = (transcript && transcript.transcriptText ? transcript.transcriptText : "").trim()
+          if (transcriptText) {
+            await this.handleSend("voice", transcriptText)
+          } else {
+            showError("没有识别到有效内容，请再说一次")
           }
         } catch (error) {
           showError(error && error.message ? error.message : "语音处理失败")
+        } finally {
+          if (!this.isRecording) {
+            this.recordingHint = "长按说话，最多 20 秒"
+          }
         }
       })
-      recorderManager.onError(() => {
-        this.isRecording = false
-        showError("录音失败，请稍后重试")
+      recorderManager.onError((error) => {
+        this.finishRecordingSession()
+        console.error("[nightly-pick][recorder] error", error)
+        const errorMessage = error && error.errMsg ? `录音失败：${error.errMsg}` : "录音失败，请稍后重试"
+        showError(errorMessage)
       })
       this.recorderReady = true
     },
@@ -234,15 +268,18 @@ export default {
       const response = await createConversation()
       this.sessionId = response.sessionId
     },
-    async handleSend(inputTypeOverride) {
-      if (!this.inputValue.trim() || this.loading) return
+    async handleSend(inputTypeOverride, explicitText) {
+      const draftText = typeof explicitText === "string" ? explicitText : this.inputValue
+      if (!draftText.trim() || this.loading) return
       await this.ensureSession()
       this.loading = true
-      const text = this.inputValue.trim()
+      const text = draftText.trim()
       const inputType = inputTypeOverride || this.inputMode
       this.userHasSpoken = true
-      appendChatMessage({ role: "user", text, timeLabel: this.currentTimeLabel() })
-      this.inputValue = ""
+      appendChatMessage({ role: "user", text, inputType, timeLabel: this.currentTimeLabel() })
+      if (typeof explicitText !== "string") {
+        this.inputValue = ""
+      }
       this.bumpScroll()
       try {
         const response = await sendMessage(this.sessionId, text, inputType === "voice" ? "voice" : "text")
@@ -250,9 +287,15 @@ export default {
           role: "assistant",
           text: response.assistantReply,
           assistantAudioUrl: response.assistantAudioUrl,
+          inputType: "text",
           timeLabel: this.currentTimeLabel(),
         })
-        this.inputMode = "text"
+        if (inputType === "voice" && response.assistantAudioUrl) {
+          this.playAssistantAudio(response.assistantAudioUrl)
+        } else {
+          this.stopAssistantAudio()
+        }
+        this.inputMode = inputType === "voice" ? "voice" : "text"
         this.bumpScroll()
         if (response.shouldEnd || response.stage === "closing") {
           this.scheduleAutoSaveConversation()
@@ -267,13 +310,44 @@ export default {
       if (!recorderManager || this.isRecording || this.loading) return
       const permissionGranted = await this.ensureRecordPermission()
       if (!permissionGranted) return
+      this.stopAssistantAudio()
       this.isRecording = true
-      recorderManager.start({ duration: 60000, format: "mp3" })
+      this.recordingHint = "松开发送，20 秒后自动发出"
+      this.recordingElapsedMs = 0
+      this.startRecordingProgress()
+      recorderManager.start({
+        duration: this.recordingMaxDurationMs,
+        format: "aac",
+        sampleRate: 16000,
+        numberOfChannels: 1,
+        encodeBitRate: 96000,
+      })
     },
-    async stopRecording() {
+    async stopRecording({ force = false } = {}) {
       if (!recorderManager || !this.isRecording) return
       this.isRecording = false
+      if (force) {
+        this.finishRecordingSession()
+      }
       recorderManager.stop()
+    },
+    startRecordingProgress() {
+      if (recordingProgressTimer) clearInterval(recordingProgressTimer)
+      recordingProgressTimer = setInterval(() => {
+        const nextElapsed = Math.min(this.recordingElapsedMs + 100, this.recordingMaxDurationMs)
+        this.recordingElapsedMs = nextElapsed
+        if (nextElapsed >= this.recordingMaxDurationMs) {
+          this.stopRecording()
+        }
+      }, 100)
+    },
+    finishRecordingSession() {
+      this.isRecording = false
+      if (recordingProgressTimer) {
+        clearInterval(recordingProgressTimer)
+        recordingProgressTimer = null
+      }
+      this.recordingElapsedMs = 0
     },
     async handleComplete() {
       try {
@@ -293,11 +367,38 @@ export default {
     },
     ensureRecordPermission() {
       return new Promise((resolve) => {
-        uni.authorize({
-          scope: "scope.record",
-          success: () => resolve(true),
+        uni.getSetting({
+          success: (settingResult) => {
+            const currentSetting = settingResult && settingResult.authSetting ? settingResult.authSetting["scope.record"] : undefined
+            if (currentSetting === false) {
+              uni.showModal({
+                title: "需要录音权限",
+                content: "语音输入需要麦克风权限，请在设置里打开录音权限。",
+                confirmText: "去设置",
+                success: (modalResult) => {
+                  if (!modalResult.confirm) {
+                    resolve(false)
+                    return
+                  }
+                  uni.openSetting({
+                    success: (openResult) => resolve(Boolean(openResult.authSetting && openResult.authSetting["scope.record"])),
+                    fail: () => resolve(false),
+                  })
+                },
+              })
+              return
+            }
+            uni.authorize({
+              scope: "scope.record",
+              success: () => resolve(true),
+              fail: () => {
+                showError("请先允许录音权限")
+                resolve(false)
+              },
+            })
+          },
           fail: () => {
-            showError("请先允许录音权限")
+            showError("无法获取录音权限状态")
             resolve(false)
           },
         })
@@ -316,7 +417,29 @@ export default {
       })
     },
     toggleInputMode() {
+      if (this.isRecording) return
       this.inputMode = this.inputMode === "voice" ? "text" : "voice"
+    },
+    playAssistantAudio(audioUrl) {
+      if (!audioUrl) return
+      this.stopAssistantAudio()
+      assistantAudioContext = uni.createInnerAudioContext()
+      assistantAudioContext.autoplay = true
+      assistantAudioContext.src = audioUrl
+      assistantAudioContext.obeyMuteSwitch = false
+      assistantAudioContext.onError((error) => {
+        console.error("[nightly-pick][assistant-audio] error", error)
+      })
+    },
+    stopAssistantAudio() {
+      if (!assistantAudioContext) return
+      try {
+        assistantAudioContext.stop()
+        assistantAudioContext.destroy()
+      } catch (error) {
+        console.error("[nightly-pick][assistant-audio] cleanup error", error)
+      }
+      assistantAudioContext = null
     },
     scheduleAutoSaveConversation() {
       if (!this.shouldAutosaveQuietly()) return
@@ -353,6 +476,8 @@ export default {
       }
     },
     async goBack() {
+      this.stopRecording({ force: true })
+      this.stopAssistantAudio()
       if (autosaveTimer) {
         clearTimeout(autosaveTimer)
         autosaveTimer = null
@@ -365,6 +490,7 @@ export default {
       return messages.map((message) => ({
         role: message.role,
         text: message.text,
+        inputType: message.inputType,
         timeLabel: this.formatTimeLabel(message.createdAt),
       }))
     },
@@ -556,6 +682,31 @@ export default {
   justify-content: center;
 }
 
+.voice-record-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.recording-hint {
+  min-height: 34rpx;
+  font-size: 22rpx;
+  color: rgba(31, 56, 48, 0.48);
+}
+
+.mic-progress-ring {
+  width: 156rpx;
+  height: 156rpx;
+  border-radius: 50%;
+  padding: 12rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.18s linear;
+}
+
 .mic-button {
   width: 128rpx;
   height: 128rpx;
@@ -570,7 +721,8 @@ export default {
 
 .mic-icon {
   color: #fff;
-  font-size: 40rpx;
+  font-size: 36rpx;
+  font-weight: 600;
 }
 
 .voice-right-placeholder {

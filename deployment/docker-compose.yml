@@ -51,11 +51,15 @@ services:
       DB_PASSWORD: ${POSTGRES_PASSWORD:-nightly_pick}
       AGENT_BASE_URL: http://agent:8000
       BUSINESS_DAY_RESET_HOUR: ${BUSINESS_DAY_RESET_HOUR:-6}
+      AUDIO_STORAGE_DIR: /app/data/audio
+      AUDIO_PUBLIC_BASE_URL: ${AUDIO_PUBLIC_BASE_URL:-https://example.com/nightly}
     depends_on:
       postgres:
         condition: service_healthy
       agent:
         condition: service_started
+    volumes:
+      - audio_data:/app/data/audio
     ports:
       - "127.0.0.1:18081:8080"
     healthcheck:
@@ -72,3 +76,4 @@ networks:
 
 volumes:
   postgres_data:
+  audio_data:
