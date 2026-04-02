@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&amp;family=Be+Vietnam+Pro:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "inverse-surface": "#31312b",
+              "inverse-primary": "#b1cdc2",
+              "surface-container-low": "#f6f3ea",
+              "surface-container": "#f1eee5",
+              "on-secondary-fixed-variant": "#3a4a42",
+              "on-primary-fixed-variant": "#334c44",
+              "tertiary-fixed-dim": "#d5c2c1",
+              "on-tertiary": "#ffffff",
+              "primary-container": "#364f46",
+              "on-surface-variant": "#414848",
+              "on-surface": "#1c1c17",
+              "on-error": "#ffffff",
+              "surface-dim": "#dddad1",
+              "primary": "#1f3830",
+              "on-primary-fixed": "#062019",
+              "on-background": "#1c1c17",
+              "surface-container-lowest": "#ffffff",
+              "secondary": "#516259",
+              "surface-tint": "#4a645b",
+              "surface-container-highest": "#e5e2da",
+              "on-tertiary-fixed-variant": "#504443",
+              "secondary-fixed-dim": "#b8cbc0",
+              "tertiary-container": "#544746",
+              "inverse-on-surface": "#f4f1e8",
+              "primary-fixed-dim": "#b1cdc2",
+              "tertiary": "#3c3130",
+              "error-container": "#ffdad6",
+              "primary-fixed": "#cce9dd",
+              "secondary-fixed": "#d4e7db",
+              "on-secondary": "#ffffff",
+              "on-primary": "#ffffff",
+              "on-error-container": "#93000a",
+              "surface-variant": "#e5e2da",
+              "on-primary-container": "#a4bfb5",
+              "on-tertiary-fixed": "#231919",
+              "outline-variant": "#c1c8c7",
+              "secondary-container": "#d4e7db",
+              "on-secondary-container": "#57685f",
+              "surface-bright": "#fcf9f0",
+              "error": "#ba1a1a",
+              "background": "#fcf9f0",
+              "tertiary-fixed": "#f1dedd",
+              "surface-container-high": "#ebe8df",
+              "surface": "#fcf9f0",
+              "outline": "#717878",
+              "on-tertiary-container": "#c7b5b4",
+              "on-secondary-fixed": "#0f1f18"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif SC"],
+              "body": ["Be Vietnam Pro"],
+              "label": ["Be Vietnam Pro"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Be Vietnam Pro', sans-serif; }
+        .font-noto-serif { font-family: 'Noto Serif SC', serif; }
+        .font-noto-sans { font-family: 'Be Vietnam Pro', sans-serif; }
+        .display-lg { font-size: 2.5rem; }
+        .label-sm { font-size: 0.75rem; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center w-full px-6 py-4 sticky top-0 z-50 bg-[#fcf9f0] dark:bg-[#1c1c17]">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#1f3830] dark:text-[#ebe8df] scale-98 active:scale-95 transition-all duration-300 ease-out cursor-pointer" data-icon="arrow_back">arrow_back</span>
+<h1 class="font-noto-serif italic text-2xl tracking-tighter text-[#1f3830] dark:text-[#ebe8df]">Nocturne Whisper</h1>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-[#1f3830] dark:text-[#ebe8df]" data-icon="search">search</span>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-6 mt-10">
+<!-- Editorial Header -->
+<div class="mb-12">
+<h2 class="font-noto-serif display-lg text-primary leading-tight mb-2">流年似水</h2>
+<p class="text-secondary opacity-70 font-medium tracking-wide">A catalog of your night whispers and lunar dreams.</p>
+</div>
+<!-- History List (Grid of Horizontal Rectangles) -->
+<div class="space-y-12">
+<!-- Month Section: May -->
+<section>
+<div class="flex items-baseline gap-3 mb-6">
+<span class="text-primary font-noto-serif text-3xl italic opacity-30">05</span>
+<p class="font-bold text-primary tracking-widest text-xs uppercase">MAY 2024</p>
+</div>
+<div class="grid grid-cols-1 gap-2">
+<!-- Row 01 -->
+<div class="bg-surface-container-lowest p-4 flex items-center justify-between rounded-lg border border-outline-variant/10 hover:bg-surface-container-low transition-colors duration-300 cursor-pointer group">
+<div class="flex items-center gap-6">
+<span class="text-primary font-noto-serif text-2xl w-8">01</span>
+<div class="flex gap-2">
+<span class="bg-primary/5 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter border border-primary/10">Calm</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline/30 text-sm" data-icon="chevron_right">chevron_right</span>
+</div>
+<!-- Row 02 -->
+<div class="bg-surface-container-lowest p-4 flex items-center justify-between rounded-lg border border-outline-variant/10 hover:bg-surface-container-low transition-colors duration-300 cursor-pointer group">
+<div class="flex items-center gap-6">
+<span class="text-primary font-noto-serif text-2xl w-8">02</span>
+<div class="flex gap-2">
+<span class="bg-secondary-container text-on-secondary-container text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter">Social</span>
+<span class="bg-primary/5 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter border border-primary/10">Tired</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline/30 text-sm" data-icon="chevron_right">chevron_right</span>
+</div>
+<!-- Row 04 -->
+<div class="bg-surface-container-lowest p-4 flex items-center justify-between rounded-lg border border-outline-variant/10 hover:bg-surface-container-low transition-colors duration-300 cursor-pointer group">
+<div class="flex items-center gap-6">
+<span class="text-primary font-noto-serif text-2xl w-8">04</span>
+<div class="flex gap-2">
+<span class="bg-tertiary-fixed text-on-tertiary-fixed-variant text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter">Anxious</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline/30 text-sm" data-icon="chevron_right">chevron_right</span>
+</div>
+<!-- Row 05 -->
+<div class="bg-surface-container-lowest p-4 flex items-center justify-between rounded-lg border border-outline-variant/10 hover:bg-surface-container-low transition-colors duration-300 cursor-pointer group">
+<div class="flex items-center gap-6">
+<span class="text-primary font-noto-serif text-2xl w-8">05</span>
+<div class="flex gap-2">
+<span class="bg-primary/5 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter border border-primary/10">Calm</span>
+<span class="bg-primary/5 text-primary text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter border border-primary/10">Deep</span>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline/30 text-sm" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Recent Highlights Section -->
+<section class="mt-16">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-noto-serif text-xl text-primary">近期回顾</h3>
+<div class="h-px flex-1 bg-outline-variant/20 ml-6"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Highlight Card 1 -->
+<div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/10 relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<span class="text-xs font-bold text-secondary tracking-widest uppercase opacity-60">May 05, 2024</span>
+<span class="material-symbols-outlined text-primary text-xl" data-icon="nights_stay" style="font-variation-settings: 'FILL' 1;">nights_stay</span>
+</div>
+<p class="font-noto-serif text-lg text-primary leading-relaxed mb-6 italic">“深夜的雨声让思绪变得异常清晰，仿佛在这片宁静中找回了久违的自我。”</p>
+<div class="flex items-center gap-2">
+<span class="bg-primary text-on-primary text-[9px] px-2 py-0.5 rounded-full uppercase">Insight</span>
+<span class="bg-primary/10 text-primary text-[9px] px-2 py-0.5 rounded-full uppercase">Rainy Night</span>
+</div>
+</div>
+<!-- Highlight Card 2 -->
+<div class="bg-surface-container-low rounded-xl p-6 border border-outline-variant/10 relative overflow-hidden">
+<div class="flex justify-between items-start mb-4">
+<span class="text-xs font-bold text-secondary tracking-widest uppercase opacity-60">April 28, 2024</span>
+<span class="material-symbols-outlined text-primary text-xl" data-icon="auto_awesome" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<p class="font-noto-serif text-lg text-primary leading-relaxed mb-6 italic">“在梦境的边缘，我看见了通往森林深处的小径，充满了未知的暖意。”</p>
+<div class="flex items-center gap-2">
+<span class="bg-secondary text-on-secondary text-[9px] px-2 py-0.5 rounded-full uppercase">Dream</span>
+<span class="bg-primary/10 text-primary text-[9px] px-2 py-0.5 rounded-full uppercase">Lucid</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Featured Reflection Image Card -->
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 rounded-t-[3rem] bg-[#fcf9f0] dark:bg-[#1c1c17] border-t border-[#1f3830]/5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] flex justify-around items-center h-20 px-8">
+<a class="flex flex-col items-center justify-center text-[#1f3830]/40 dark:text-[#fcf9f0]/40 hover:text-[#1f3830] dark:hover:text-[#fcf9f0] transition-colors duration-300 active:scale-95 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="bedtime">bedtime</span>
+<span class="font-sans text-xs font-medium tracking-tight">今夜</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#1f3830] dark:text-[#fcf9f0] scale-110 hover:text-[#1f3830] dark:hover:text-[#fcf9f0] transition-colors duration-300 active:scale-95 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="auto_stories" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="font-sans text-xs font-medium tracking-tight">历史</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#1f3830]/40 dark:text-[#fcf9f0]/40 hover:text-[#1f3830] dark:hover:text-[#fcf9f0] transition-colors duration-300 active:scale-95 transition-all duration-300 ease-out" href="#">
+<span class="material-symbols-outlined mb-0.5" data-icon="settings">settings</span>
+<span class="font-sans text-xs font-medium tracking-tight">设置</span>
+</a>
+</nav>
+</body></html>

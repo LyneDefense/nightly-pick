@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: nightly-pick-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: nightly_pick
+      POSTGRES_USER: nightly_pick
+      POSTGRES_PASSWORD: nightly_pick
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nightly_pick -d nightly_pick"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

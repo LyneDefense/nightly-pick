@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&amp;family=Be+Vietnam+Pro:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error-container": "#ffdad6",
+              "on-tertiary": "#ffffff",
+              "primary-fixed": "#cce9dd",
+              "surface-variant": "#e5e2da",
+              "primary-fixed-dim": "#b1cdc2",
+              "inverse-on-surface": "#f4f1e8",
+              "on-secondary-fixed": "#0f1f18",
+              "on-primary-container": "#a4bfb5",
+              "surface": "#fcf9f0",
+              "on-tertiary-fixed-variant": "#504443",
+              "primary-container": "#364f46",
+              "on-background": "#1c1c17",
+              "on-primary-fixed-variant": "#334c44",
+              "surface-dim": "#dddad1",
+              "secondary": "#516259",
+              "surface-tint": "#4a645b",
+              "on-surface": "#1c1c17",
+              "secondary-fixed-dim": "#b8cbc0",
+              "on-surface-variant": "#414848",
+              "surface-bright": "#fcf9f0",
+              "tertiary-fixed-dim": "#d5c2c1",
+              "surface-container": "#f1eee5",
+              "tertiary": "#3c3130",
+              "on-secondary": "#ffffff",
+              "secondary-container": "#d4e7db",
+              "surface-container-highest": "#e5e2da",
+              "outline": "#717878",
+              "secondary-fixed": "#d4e7db",
+              "on-primary": "#ffffff",
+              "inverse-primary": "#b1cdc2",
+              "inverse-surface": "#31312b",
+              "on-secondary-container": "#57685f",
+              "outline-variant": "#c1c8c7",
+              "on-tertiary-fixed": "#231919",
+              "on-primary-fixed": "#062019",
+              "surface-container-high": "#ebe8df",
+              "on-error": "#ffffff",
+              "surface-container-low": "#f6f3ea",
+              "surface-container-lowest": "#ffffff",
+              "on-tertiary-container": "#c7b5b4",
+              "on-error-container": "#93000a",
+              "primary": "#1f3830",
+              "background": "#fcf9f0",
+              "on-secondary-fixed-variant": "#3a4a42",
+              "tertiary-fixed": "#f1dedd",
+              "tertiary-container": "#544746",
+              "error": "#ba1a1a"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif SC", "serif"],
+              "body": ["Be Vietnam Pro", "sans-serif"],
+              "label": ["Be Vietnam Pro", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+        }
+        body {
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background-color: #fcf9f0;
+        }
+        .serif-text {
+            font-family: 'Noto Serif SC', serif;
+        }
+        .settings-card {
+            transition: transform 0.2s ease;
+        }
+        .settings-card:active {
+            transform: scale(0.98);
+        }
+        /* Custom Toggle Switch Style */
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #1f3830;
+        }
+        .toggle-checkbox:checked + .toggle-label .toggle-dot {
+            transform: translateX(1.25rem);
+            background-color: #fcf9f0;
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="text-on-surface antialiased pb-32">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-[#fcf9f0]/70 dark:bg-[#1c1c17]/70 backdrop-blur-xl flex items-center h-16 px-6">
+<div class="flex items-center space-x-4">
+<span class="material-symbols-outlined text-[#1f3830] dark:text-[#ebe8df] cursor-pointer hover:opacity-80 transition-opacity active:duration-300 scale-95" data-icon="arrow_back">arrow_back</span>
+<h1 class="font-serif font-bold text-[#1f3830] dark:text-[#ebe8df] text-lg">夜拾</h1>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 px-6 max-w-2xl mx-auto space-y-10">
+<!-- Header Section -->
+<section class="space-y-2">
+<h2 class="text-3xl font-headline font-bold text-primary tracking-tight">设置</h2>
+<p class="text-on-surface-variant text-sm font-medium opacity-70">调整您的夜晚对话体验与数据偏好</p>
+</section>
+<!-- Profile Section -->
+<section class="bg-surface-container-low rounded-lg p-6 flex items-center space-x-6">
+<div class="relative">
+<img alt="User Portrait" class="w-20 h-20 rounded-full object-cover grayscale-[20%] border-2 border-surface-container-highest shadow-sm" data-alt="Softly lit minimalist close-up portrait of a person in a warm domestic environment with gentle shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_ToKM9OaRpiGE2rKxWNEh1xplzMhKmnYxhEFT5gd7Sh0d1HDmyiiiyO_jtTBKYigmC0iv3iPYThbGZgOHnW1zJaf11JFfiZmW9McTQnqKKopbYLEjmtFIPxj4ICtBq6PnqCZHDsak52-PH-f2P0IFfLZchdm24yto4yyFlu-x_TObHkgxOYpFnZXMiP4RGpVyJoBaWNDgNJmMfoG4mk3ViTmYW6d3crPFRO-VgqXDRr3fqgfdkiUZfXl85rGX4iZlNqr1Bq0EqW-w"/>
+<div class="absolute bottom-0 right-0 bg-primary w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-on-primary">
+<span class="material-symbols-outlined text-sm" data-icon="edit">edit</span>
+</div>
+</div>
+<div class="flex-1">
+<h3 class="text-xl font-headline font-bold text-primary">林舒</h3>
+<p class="text-on-surface-variant text-sm">lin.shu@example.com</p>
+<button class="mt-2 text-xs font-label uppercase tracking-widest text-primary border-b border-primary/20 pb-0.5 hover:opacity-60 transition-opacity">编辑个人资料</button>
+</div>
+</section>
+<!-- Conversational Preferences -->
+<section class="space-y-4">
+<label class="text-xs font-label font-bold text-primary/40 uppercase tracking-widest px-1">对话偏好</label>
+<div class="bg-surface-container-high rounded-lg overflow-hidden">
+<!-- Item: Voice Feedback -->
+<div class="flex items-center justify-between p-5 border-b border-outline-variant/15">
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="settings_voice">settings_voice</span>
+</div>
+<div>
+<p class="font-medium text-primary">语音反馈</p>
+<p class="text-xs text-on-surface-variant">对话时开启 AI 语音实时响应</p>
+</div>
+</div>
+<div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-2 border-outline-variant appearance-none cursor-pointer outline-none transition-all duration-300" id="toggle-voice" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-surface-variant cursor-pointer transition-colors duration-300" for="toggle-voice">
+<span class="toggle-dot block w-4 h-4 rounded-full bg-white shadow transform transition-transform duration-300 mt-0.5 ml-0.5"></span>
+</label>
+</div>
+</div>
+<!-- Item: Conversational Tone -->
+<div class="flex items-center justify-between p-5 hover:bg-surface-container-lowest transition-colors cursor-pointer group">
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="psychology">psychology</span>
+</div>
+<div>
+<p class="font-medium text-primary">AI 对话语气</p>
+<p class="text-xs text-on-surface-variant">当前：温柔疗愈</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- Memory & Intelligence -->
+<section class="space-y-4">
+<label class="text-xs font-label font-bold text-primary/40 uppercase tracking-widest px-1">记忆与智能</label>
+<div class="bg-surface-container-high rounded-lg overflow-hidden">
+<div class="flex items-center justify-between p-5">
+<div class="flex items-center space-x-4">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" data-icon="auto_awesome">auto_awesome</span>
+</div>
+<div class="pr-8">
+<p class="font-medium text-primary">长期记忆功能</p>
+<p class="text-xs text-on-surface-variant">允许 AI 引用过去数周的对话背景以提供更深度的陪伴感</p>
+</div>
+</div>
+<div class="relative inline-block w-10 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-2 border-outline-variant appearance-none cursor-pointer outline-none transition-all duration-300" id="toggle-memory" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-surface-variant cursor-pointer transition-colors duration-300" for="toggle-memory">
+<span class="toggle-dot block w-4 h-4 rounded-full bg-white shadow transform transition-transform duration-300 mt-0.5 ml-0.5"></span>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- Security & Data -->
+<section class="space-y-4">
+<label class="text-xs font-label font-bold text-primary/40 uppercase tracking-widest px-1">数据安全</label>
+<div class="space-y-4">
+<!-- Log Out Button -->
+<div class="bg-surface-container-low p-5 rounded-lg flex flex-col space-y-4 hover:bg-error-container/20 transition-all cursor-pointer border border-transparent group">
+<span class="material-symbols-outlined text-error group-hover:shake transition-transform" data-icon="logout">logout</span>
+<div>
+<p class="font-medium text-error">退出登录</p>
+<p class="text-[10px] text-on-surface-variant uppercase tracking-wider">当前设备: iPhone 15</p>
+</div>
+</div>
+<!-- Clear Chat History Button -->
+<div class="bg-surface-container-high rounded-lg p-5 flex items-center justify-between group cursor-pointer">
+<div class="flex items-center space-x-4">
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="delete_forever">delete_forever</span>
+<p class="font-medium text-on-surface-variant">清空所有对话记录</p>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-error transition-colors" data-icon="chevron_right">chevron_right</span>
+</div>
+</div>
+</section>
+<!-- App Info -->
+<footer class="text-center pt-8 pb-12 opacity-30 select-none">
+<p class="font-headline font-bold text-primary tracking-widest text-lg">夜拾</p>
+<p class="text-[10px] uppercase font-label">Version 2.4.0 (Build 82)</p>
+</footer>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full z-50 pb-safe bg-[#fcf9f0] dark:bg-[#1c1c17] flex justify-around items-center h-20 px-8 shadow-[0_-4px_20px_rgba(28,28,23,0.05)]">
+<!-- Tab: 今夜 -->
+<a class="flex flex-col items-center justify-center text-[#1f3830]/40 dark:text-[#ebe8df]/40 px-5 py-1.5 hover:text-[#1f3830] dark:hover:text-[#fcf9f0] transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl" data-icon="bedtime">bedtime</span>
+<span class="font-sans text-xs font-medium tracking-wide">今夜</span>
+</a>
+<!-- Tab: 历史 -->
+<a class="flex flex-col items-center justify-center text-[#1f3830]/40 dark:text-[#ebe8df]/40 px-5 py-1.5 hover:text-[#1f3830] dark:hover:text-[#fcf9f0] transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl" data-icon="history">history</span>
+<span class="font-sans text-xs font-medium tracking-wide">历史</span>
+</a>
+<!-- Tab: 设置 (ACTIVE) -->
+<a class="flex flex-col items-center justify-center text-[#1f3830] dark:text-[#fcf9f0] bg-[#ebe8df] dark:bg-[#2f4f4f]/30 rounded-full px-5 py-1.5 transition-all" href="#">
+<span class="material-symbols-outlined text-2xl" data-icon="settings" style="font-variation-settings: 'FILL' 1;">settings</span>
+<span class="font-sans text-xs font-medium tracking-wide">设置</span>
+</a>
+</nav>
+</body></html>

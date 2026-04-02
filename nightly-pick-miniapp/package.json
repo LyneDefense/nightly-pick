@@ -1,0 +1,17 @@
+{
+  "name": "nightly-pick-miniapp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:mp-weixin": "uni -p mp-weixin",
+    "build:mp-weixin": "uni build -p mp-weixin"
+  },
+  "dependencies": {
+    "vue": "^3.4.21"
+  },
+  "devDependencies": {
+    "@dcloudio/types": "^3.4.14",
+    "@dcloudio/vite-plugin-uni": "^3.0.0-4060320250324001",
+    "vite": "^5.4.8"
+  }
+}

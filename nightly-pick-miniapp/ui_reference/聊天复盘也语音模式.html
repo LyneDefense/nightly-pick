@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>夜拾 - 正在倾听</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&amp;family=Be+Vietnam+Pro:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#1f3830",
+                        "on-primary": "#ffffff",
+                        "surface": "#fcf9f0",
+                        "on-surface": "#1c1c17",
+                        "surface-container": "#f1eee5",
+                        "surface-container-high": "#ebe8df",
+                        "surface-container-low": "#f6f3ea",
+                        "outline-variant": "#c1c8c7",
+                        "secondary-container": "#d4e7db",
+                        "on-secondary-container": "#57685f"
+                    },
+                    fontFamily: {
+                        "headline": ["Noto Serif SC", "serif"],
+                        "body": ["Be Vietnam Pro", "sans-serif"],
+                        "serif": ["Noto Serif SC", "serif"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>.material-symbols-outlined {
+    font-variation-settings: "FILL" 0, "wght" 300, "GRAD" 0, "opsz" 24
+    }
+.recording-wave {
+    box-shadow: 0 0 0 0 rgba(31, 56, 48, 0.4);
+    animation: wave-pulse 2s infinite cubic-bezier(0.66, 0, 0, 1)
+    }
+@keyframes wave-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(31, 56, 48, 0.4);
+        } 70% {
+        box-shadow: 0 0 0 25px rgba(31, 56, 48, 0);
+        } 100% {
+        box-shadow: 0 0 0 0 rgba(31, 56, 48, 0);
+        }
+    }
+.mic-ring {
+    border: 1px solid rgba(31, 56, 48, 0.1);
+    border-radius: 50%
+    }
+.paper-texture {
+    background-color: #fcf9f0;
+    background-image: url(https://lh3.googleusercontent.com/aida-public/AB6AXuDSmmogn29MkyJxbyFi12clM0XmTve3ny-lHIDBVd-z48TFPQBCIrWWZ79sQsR6Dg_ULVdjfc6-OiYYXV9QffR1NJKwKX83z-Ocgy09EodxkfCO__hNJejwdqsUyp5sZE3saPByIIzy4lKP99qaf1bMXLGVBxVMS69de2ucfPxdPPnSy2VWhBnDcpE7wpM1dZt-TOX--7Tb92-OBPuhK9yeClKeLSevx5-PiKu_lMfPb9hUeycjXjytL2ZNnCxVAFmFLApKd2AaaD-o)
+    }</style>
+</head>
+<body class="paper-texture text-on-surface font-body selection:bg-primary/20 min-h-screen flex flex-col">
+<!-- Top Navigation -->
+<header class="fixed top-0 w-full z-50 bg-[#fcf9f0]/60 backdrop-blur-md flex items-center h-16 px-6">
+<div class="flex-none">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-black/5 transition-colors active:scale-95 duration-300">
+<span class="material-symbols-outlined text-primary" data-icon="arrow_back">arrow_back</span>
+</button>
+</div>
+<div class="flex-grow text-center">
+<span class="font-serif font-medium text-lg text-primary/80 tracking-widest">正在记录...</span>
+</div>
+<div class="flex-none w-10"></div>
+</header>
+<!-- Main Content: Chat Stream -->
+<main class="flex-grow pt-24 pb-48 px-8 overflow-y-auto">
+<div class="max-w-2xl mx-auto space-y-12">
+<!-- AI Message -->
+<div class="flex flex-col items-start space-y-2">
+<div class="max-w-[85%] bg-primary text-on-primary px-7 py-5 rounded-[2rem] rounded-tl-md shadow-lg leading-relaxed font-serif text-[1.05rem]">
+                    晚上好。今天你的心情像哪种颜色？
+                </div>
+<span class="px-2 text-xs font-label text-primary/30 tracking-widest uppercase">22:15</span>
+</div>
+<!-- User Message (Transcribed) -->
+<div class="flex flex-col items-end space-y-2">
+<div class="max-w-[85%] bg-white/60 border border-black/[0.03] backdrop-blur-sm px-7 py-5 rounded-[2rem] rounded-tr-md italic text-on-surface/80 leading-relaxed font-serif text-[1.05rem] shadow-sm">
+                    “嗯... 我想是那种淡淡的灰紫色，像傍晚还没完全暗下来的天空，有点疲倦但很安静。”
+                </div>
+<span class="px-2 text-xs font-label text-primary/30 tracking-widest uppercase">22:16</span>
+</div>
+<!-- AI Message -->
+<div class="flex flex-col items-start space-y-2">
+<div class="max-w-[85%] bg-primary text-on-primary px-7 py-5 rounded-[2rem] rounded-tl-md shadow-lg leading-relaxed font-serif text-[1.05rem]">
+                    那种静谧的过渡色。这种颜色让你想到了今天发生的什么具体时刻吗？
+                </div>
+<span class="px-2 text-xs font-label text-primary/30 tracking-widest uppercase">22:17</span>
+</div>
+<!-- Pending User Feedback -->
+<div class="flex flex-col items-end w-full">
+<div class="bg-black/[0.03] px-6 py-4 rounded-full flex gap-2 opacity-40">
+<div class="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style="animation-delay: 0s"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style="animation-delay: 0.2s"></div>
+<div class="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" style="animation-delay: 0.4s"></div>
+</div>
+</div>
+</div>
+</main>
+<!-- Ambient Glowing Background Elements -->
+<div class="fixed inset-0 pointer-events-none z-[-1] overflow-hidden">
+<div class="absolute top-[20%] right-[-10%] w-[400px] h-[400px] rounded-full bg-primary/5 blur-[120px]"></div>
+<div class="absolute bottom-[10%] left-[-10%] w-[400px] h-[400px] rounded-full bg-secondary-container/30 blur-[100px]"></div>
+</div>
+<!-- Persistent Bottom Controls (Symmetric Version Evolution) -->
+<footer class="fixed bottom-0 left-0 w-full z-50 px-10 pb-12 pt-6">
+<div class="max-w-md mx-auto relative flex items-center justify-center">
+<!-- Keyboard Switch (Left Positioning) -->
+<div class="absolute left-0">
+<button class="w-14 h-14 flex items-center justify-center rounded-full bg-black/[0.04] text-primary/60 hover:bg-black/[0.08] hover:text-primary transition-all active:scale-90 duration-300">
+<span class="material-symbols-outlined text-2xl" data-icon="keyboard">keyboard</span>
+</button>
+</div>
+<!-- Main Recording Button (Center) -->
+<div class="relative flex items-center justify-center w-32 h-32">
+<!-- Glowing Rings -->
+<div class="absolute inset-0 mic-ring scale-100 opacity-20"></div>
+<div class="absolute inset-0 mic-ring scale-[0.85] opacity-40"></div>
+<div class="absolute inset-0 mic-ring scale-[0.7] opacity-60"></div>
+<button class="relative z-10 w-20 h-20 bg-primary rounded-full flex items-center justify-center text-on-primary recording-wave active:scale-90 transition-transform duration-300 shadow-2xl">
+<span class="material-symbols-outlined text-4xl" data-icon="mic" data-weight="fill" style="font-variation-settings: 'FILL' 1;">mic</span>
+</button>
+</div>
+<!-- Balanced Spacer (Replacing the Finish Button to keep center alignment) -->
+<div class="absolute right-0 w-14 h-14"></div>
+</div>
+<!-- Safe Area Padding for Mobile -->
+<div class="h-safe-area-bottom"></div>
+</footer>
+</body></html>

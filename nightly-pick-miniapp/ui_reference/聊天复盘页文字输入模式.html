@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&amp;family=Be+Vietnam+Pro:ital,wght@0,400;0,500;0,700;1,400&amp;family=Noto+Sans+SC:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-secondary-container": "#57685f",
+              "on-secondary-fixed-variant": "#3a4a42",
+              "secondary-container": "#d4e7db",
+              "outline-variant": "#c1c8c7",
+              "on-primary-container": "#a4bfb5",
+              "on-background": "#1c1c17",
+              "tertiary-container": "#544746",
+              "secondary-fixed-dim": "#b8cbc0",
+              "on-surface-variant": "#414848",
+              "secondary-fixed": "#d4e7db",
+              "tertiary-fixed": "#f1dedd",
+              "on-tertiary-fixed": "#231919",
+              "surface-container-lowest": "#ffffff",
+              "on-surface": "#1c1c17",
+              "on-primary-fixed-variant": "#334c44",
+              "surface-variant": "#e5e2da",
+              "on-tertiary-fixed-variant": "#504443",
+              "outline": "#717878",
+              "background": "#fcf9f0",
+              "surface": "#fcf9f0",
+              "surface-dim": "#dddad1",
+              "tertiary": "#3c3130",
+              "surface-container-low": "#f6f3ea",
+              "on-error-container": "#93000a",
+              "inverse-surface": "#31312b",
+              "on-primary": "#ffffff",
+              "tertiary-fixed-dim": "#d5c2c1",
+              "primary-fixed-dim": "#b1cdc2",
+              "primary": "#1f3830",
+              "surface-tint": "#4a645b",
+              "primary-fixed": "#cce9dd",
+              "on-error": "#ffffff",
+              "surface-container-high": "#ebe8df",
+              "on-tertiary-container": "#c7b5b4",
+              "on-secondary-fixed": "#0f1f18",
+              "on-secondary": "#ffffff",
+              "surface-container": "#f1eee5",
+              "surface-bright": "#fcf9f0",
+              "error": "#ba1a1a",
+              "inverse-on-surface": "#f4f1e8",
+              "on-tertiary": "#ffffff",
+              "secondary": "#516259",
+              "surface-container-highest": "#e5e2da",
+              "error-container": "#ffdad6",
+              "on-primary-fixed": "#062019",
+              "inverse-primary": "#b1cdc2",
+              "primary-container": "#364f46"
+            },
+            fontFamily: {
+              "headline": ["Noto Serif SC", "serif"],
+              "body": ["Be Vietnam Pro", "Noto Sans SC", "sans-serif"],
+              "label": ["Be Vietnam Pro", "Noto Sans SC", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .scrolling-content::-webkit-scrollbar {
+            display: none;
+        }
+        .scrolling-content {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .parchment-glow {
+            background: radial-gradient(circle at 50% 50%, rgba(252, 249, 240, 0) 0%, rgba(252, 249, 240, 0.8) 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body min-h-screen flex flex-col selection:bg-secondary-fixed selection:text-on-secondary-fixed">
+<!-- Top Navigation Shell -->
+<nav class="fixed top-0 w-full z-50 h-16 bg-[#fcf9f0]/70 backdrop-blur-xl flex items-center justify-between px-6">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors active:scale-90 duration-300">
+<span class="material-symbols-outlined text-primary">arrow_back_ios_new</span>
+</button>
+<div class="flex flex-col items-center">
+<span class="text-xs tracking-[0.2em] font-label text-secondary mb-0.5">正在记录...</span>
+<span class="font-headline font-bold tracking-widest text-primary">夜拾</span>
+</div>
+<button class="px-4 py-1.5 rounded-full bg-primary-container text-on-primary-container text-sm font-medium transition-all active:scale-95 duration-300">
+            完成
+        </button>
+</nav>
+<!-- Message Flow Area -->
+<main class="flex-1 pt-24 pb-32 px-6 scrolling-content overflow-y-auto max-w-2xl mx-auto w-full space-y-10">
+<!-- AI Initial Prompt -->
+<div class="flex flex-col items-start max-w-[85%] animate-fade-in">
+<div class="bg-secondary-container text-on-secondary-container px-6 py-4 rounded-tl-none rounded-tr-lg rounded-br-lg rounded-bl-lg shadow-sm">
+<p class="font-headline text-lg leading-relaxed">今晚的空气有些微凉，窗外还留着些许余温。在这一刻，你想对自己说点什么？</p>
+</div>
+<span class="text-[10px] font-label text-outline mt-2 ml-1 tracking-wider">22:14</span>
+</div>
+<!-- User Voice Transcription Message -->
+<div class="flex flex-col items-end max-w-[85%] ml-auto">
+<div class="bg-surface-container-highest text-on-surface px-6 py-4 rounded-tr-none rounded-tl-lg rounded-br-lg rounded-bl-lg">
+<div class="flex items-center gap-3 mb-2 opacity-60">
+<span class="material-symbols-outlined text-sm">graphic_eq</span>
+<span class="text-xs font-label">语音已转录</span>
+</div>
+<p class="text-base leading-relaxed">今天去看了那家心心念念很久的书店。书店里有一股陈年木头的味道，让人觉得很安心。我买了一本诗集，感觉在这个快节奏的城市里找到了一个属于自己的小小角落。</p>
+</div>
+<span class="text-[10px] font-label text-outline mt-2 mr-1 tracking-wider">22:15</span>
+</div>
+<!-- AI Reflective Response -->
+<div class="flex flex-col items-start max-w-[85%]">
+<div class="bg-secondary-container text-on-secondary-container px-6 py-4 rounded-tl-none rounded-tr-lg rounded-br-lg rounded-bl-lg shadow-sm">
+<p class="font-headline text-lg leading-relaxed">木质的香气总是能让人瞬间沉静下来。那本诗集里，有没有哪一句刚好触动了你此刻的心境？</p>
+</div>
+<span class="text-[10px] font-label text-outline mt-2 ml-1 tracking-wider">22:16</span>
+</div>
+<!-- User Text Message -->
+<div class="flex flex-col items-end max-w-[85%] ml-auto">
+<div class="bg-surface-container-highest text-on-surface px-6 py-4 rounded-tr-none rounded-tl-lg rounded-br-lg rounded-bl-lg">
+<p class="text-base leading-relaxed">有一句写道：“万物皆有裂痕，那是光照进来的地方。”我觉得最近的疲惫好像在这种裂痕中找到了出口。</p>
+</div>
+<span class="text-[10px] font-label text-outline mt-2 mr-1 tracking-wider">22:17</span>
+</div>
+<!-- Placeholder for current thinking/input flow gap -->
+<div class="h-20"></div>
+</main>
+<!-- Bottom Input Area Shell -->
+<section class="fixed bottom-0 w-full z-50 bg-[#fcf9f0]/80 backdrop-blur-xl pt-4 pb-8">
+<!-- Floating Finish Button (Alternative layout option for balance if not in header) -->
+<!-- <div class="absolute -top-12 left-1/2 -translate-x-1/2">
+             <button class="bg-surface-container-high text-on-surface-variant px-8 py-2 rounded-full text-xs font-medium tracking-widest uppercase hover:bg-surface-container-highest transition-colors">Finish Session</button>
+        </div> -->
+<div class="max-w-2xl mx-auto px-6">
+<div class="relative flex items-end gap-3 items-center">
+<!-- Voice Mode Switcher -->
+<button class="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-low text-primary hover:bg-surface-container-high transition-all active:scale-90">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">mic</span>
+</button>
+<!-- Seamless Text Input Container -->
+<div class="flex-1 bg-surface-container-low rounded-xl px-4 py-3 flex items-center transition-all focus-within:bg-surface-container-high">
+<textarea class="w-full bg-transparent border-none focus:ring-0 p-0 text-on-surface placeholder:text-outline/60 text-base resize-none max-h-32 font-body" placeholder="输入今晚的想法..." rows="1"></textarea>
+</div>
+<!-- Send Action -->
+<button class="w-12 h-12 flex items-center justify-center rounded-full bg-primary text-on-primary shadow-lg hover:opacity-90 active:scale-90 transition-all">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+<!-- Subtle Instruction -->
+<div class="mt-4 flex justify-center">
+<p class="text-[10px] text-outline/40 font-label tracking-[0.3em] uppercase">Recording the whispers of the night</p>
+</div>
+</div>
+</section>
+<!-- Background Texture Layer -->
+<div class="fixed inset-0 pointer-events-none z-[-1] opacity-40">
+<div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/natural-paper.png')]"></div>
+<div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#fcf9f0]"></div>
+</div>
+</body></html>

@@ -1,0 +1,41 @@
+[
+  {
+    "name": "companionship_insomnia",
+    "conversation_text": "user: 我今晚不太想说话，也有点睡不着。\nassistant: 我在，你想安静待一会儿也可以。\nuser: 嗯，就是想有人在，但也不想把事情说得很明白。",
+    "expected_plan": {
+      "reflection_depth_in": ["companionship", "light"],
+      "should_list_facts": false,
+      "should_list_unfinished": false
+    },
+    "expected_writer": {
+      "summary_contains": ["睡不着", "陪"],
+      "summary_not_contains": ["今天做了", "本来想"]
+    }
+  },
+  {
+    "name": "day_review_with_unfinished",
+    "conversation_text": "user: 今天开会的时候我一直有点烦。\nassistant: 什么最让你卡住？\nuser: 我本来想下班后去跑步，但最后还是没去，就一直拖着。\nassistant: 现在你最在意的是哪一块？\nuser: 我其实更在意那种明明知道该动起来却没动的感觉。",
+    "expected_plan": {
+      "reflection_depth_in": ["medium", "deep"],
+      "should_list_facts": true,
+      "should_list_unfinished": true
+    },
+    "expected_writer": {
+      "summary_contains": ["想做但没做", "核心"],
+      "open_loops_min": 1
+    }
+  },
+  {
+    "name": "light_evening_sorting",
+    "conversation_text": "user: 今天其实没有特别大的事，就是下午有点空，晚上回到家也一直提不起劲。\nassistant: 这种提不起劲更像累，还是更像心里有点空？\nuser: 更像有点空，但也说不上来。",
+    "expected_plan": {
+      "reflection_depth_in": ["light", "medium"],
+      "should_list_facts": true,
+      "should_list_unfinished": false
+    },
+    "expected_writer": {
+      "summary_contains": ["今晚", "今天"],
+      "summary_not_contains": ["没做成", "拖着"]
+    }
+  }
+]

@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+
+<html class="light" lang="zh-CN"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@200;300;400;700&amp;family=Noto+Sans+SC:wght@100;300;400;500&amp;family=Be+Vietnam+Pro:wght@100;300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "error-container": "#ffdad6",
+                        "on-tertiary": "#ffffff",
+                        "primary-fixed": "#cce9dd",
+                        "surface-variant": "#e5e2da",
+                        "primary-fixed-dim": "#b1cdc2",
+                        "inverse-on-surface": "#f4f1e8",
+                        "on-secondary-fixed": "#0f1f18",
+                        "on-primary-container": "#a4bfb5",
+                        "surface": "#fcf9f0",
+                        "on-tertiary-fixed-variant": "#504443",
+                        "primary-container": "#364f46",
+                        "on-background": "#1c1c17",
+                        "on-primary-fixed-variant": "#334c44",
+                        "surface-dim": "#dddad1",
+                        "secondary": "#516259",
+                        "surface-tint": "#4a645b",
+                        "on-surface": "#1c1c17",
+                        "secondary-fixed-dim": "#b8cbc0",
+                        "on-surface-variant": "#414848",
+                        "surface-bright": "#fcf9f0",
+                        "tertiary-fixed-dim": "#d5c2c1",
+                        "surface-container": "#f1eee5",
+                        "tertiary": "#3c3130",
+                        "on-secondary": "#ffffff",
+                        "secondary-container": "#d4e7db",
+                        "surface-container-highest": "#e5e2da",
+                        "outline": "#717878",
+                        "secondary-fixed": "#d4e7db",
+                        "on-primary": "#ffffff",
+                        "inverse-primary": "#b1cdc2",
+                        "inverse-surface": "#31312b",
+                        "on-secondary-container": "#57685f",
+                        "outline-variant": "#c1c8c7",
+                        "on-tertiary-fixed": "#231919",
+                        "on-primary-fixed": "#062019",
+                        "surface-container-high": "#ebe8df",
+                        "on-error": "#ffffff",
+                        "surface-container-low": "#f6f3ea",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#c7b5b4",
+                        "on-error-container": "#93000a",
+                        "primary": "#1f3830",
+                        "background": "#fcf9f0",
+                        "on-secondary-fixed-variant": "#3a4a42",
+                        "tertiary-fixed": "#f1dedd",
+                        "tertiary-container": "#544746",
+                        "error": "#ba1a1a"
+                    },
+                    fontFamily: {
+                        "headline": ["Noto Serif SC", "serif"],
+                        "body": ["Noto Sans SC", "sans-serif"],
+                        "label": ["Noto Sans SC", "sans-serif"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 200, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #fcf9f0;
+            color: #1c1c17;
+            -webkit-font-smoothing: antialiased;
+        }
+        @keyframes subtle-pulse {
+            0% { transform: scale(1); opacity: 0.4; }
+            50% { transform: scale(1.05); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 0.4; }
+        }
+        .moonlight-glow {
+            background: radial-gradient(circle, rgba(31, 56, 48, 0.08) 0%, rgba(252, 249, 240, 0) 70%);
+            animation: subtle-pulse 8s ease-in-out infinite;
+        }
+        @keyframes float-gentle {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+            100% { transform: translateY(0px); }
+        }
+        .animate-float-gentle {
+            animation: float-gentle 10s ease-in-out infinite;
+        }
+        .etched-border {
+            border: 0.5px solid rgba(31, 56, 48, 0.1);
+        }
+        .paper-card {
+            background: rgba(252, 249, 240, 0.4);
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 24px -1px rgba(31, 56, 48, 0.05);
+            transform: rotate(-0.5deg);
+        }
+        .letter-spacing-elegant {
+            letter-spacing: 0.4em;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-body selection:bg-primary-fixed selection:text-on-primary-fixed overflow-hidden bg-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 bg-[#fcf9f0]/40 backdrop-blur-md border-b border-primary/5">
+<div class="flex items-center h-24 px-10 justify-between">
+<div class="flex flex-col">
+<span class="font-headline font-semibold text-[#1f3830] text-2xl tracking-[0.2em] leading-none">夜拾</span>
+<span class="font-label text-[10px] text-primary/40 tracking-[0.4em] mt-2">深夜记录</span>
+</div>
+<div class="flex flex-col items-end text-right">
+<span class="font-headline text-[13px] text-primary/80 font-normal tracking-wide">8月24日 · 周六</span>
+<span class="font-headline text-[11px] text-primary/40 italic mt-1.5 font-extralight tracking-wider">晚上好，今天过得怎么样？</span>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col items-center justify-center px-10 relative overflow-hidden">
+<!-- Atmospheric Background Elements -->
+<div class="absolute inset-0 overflow-hidden pointer-events-none">
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] moonlight-glow"></div>
+<div class="absolute top-0 left-1/2 -translate-x-1/2 w-[0.5px] h-48 bg-gradient-to-b from-primary/10 to-transparent"></div>
+</div>
+<!-- The Hero Section -->
+<section class="relative z-10 flex flex-col items-center text-center max-w-sm w-full pt-12">
+<button class="group relative flex flex-col items-center justify-center transition-all duration-1000 outline-none">
+<!-- Glow effect around button -->
+<div class="absolute -inset-16 bg-primary/5 rounded-full blur-[80px] opacity-40 group-hover:opacity-80 transition-opacity duration-1000"></div>
+<div class="relative z-10 flex flex-col items-center animate-float-gentle">
+<!-- Graphic -->
+<div class="relative mb-16">
+<div class="absolute inset-0 scale-150 blur-2xl bg-primary/5 rounded-full group-hover:bg-primary/10 transition-all duration-1000"></div>
+<div class="relative flex items-center justify-center w-24 h-24 border border-primary/5 rounded-full bg-surface/20 backdrop-blur-sm"><span class="font-headline text-lg text-primary/40 group-hover:text-primary/70 transition-all duration-700">子夜之梦</span></div>
+</div>
+<!-- Primary Prompt -->
+<div class="space-y-10">
+<h1 class="font-headline text-[38px] text-primary/80 font-light letter-spacing-elegant transition-all duration-1000 group-hover:text-primary">
+                            聊聊今晚...
+                        </h1>
+<div class="flex items-center justify-center gap-4">
+<span class="w-12 h-[0.5px] bg-primary/10"></span>
+<p class="font-label text-[11px] tracking-[0.3em] text-primary/40 group-hover:text-primary/60 transition-colors">开启今夜的诉说</p>
+<span class="w-12 h-[0.5px] bg-primary/10"></span>
+</div>
+</div>
+</div>
+</button>
+<!-- Memory Fragment Section -->
+<div class="mt-40 w-full max-w-xs relative group">
+<div class="paper-card rounded-2xl p-8 etched-border transition-all duration-700 group-hover:shadow-lg group-hover:bg-surface/60">
+<div class="space-y-6">
+<div class="flex items-center justify-center gap-3 text-[10px] tracking-[0.3em] text-primary/30 font-label">
+<span class="material-symbols-outlined text-[12px]" data-icon="auto_stories">auto_stories</span>
+<span>心路回顾</span>
+</div>
+<div class="relative">
+<p class="font-headline italic text-primary/60 text-[15px] leading-[1.8] tracking-wide font-light">
+                                “那天你说：那一刻，我觉得生活慢了下来...”
+                            </p>
+</div>
+<div class="pt-2 flex flex-col items-center opacity-30 group-hover:opacity-50 transition-opacity">
+<div class="flex items-center gap-2 font-label text-[9px] tracking-[0.1em]">
+<span class="material-symbols-outlined text-[10px]" data-icon="history">history</span>
+<span>上次记录：3小时前</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 w-full z-50 bg-[#fcf9f0] rounded-t-[3rem] border-t border-[#1f3830]/5 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+<div class="flex justify-around items-center h-20 px-8 w-full">
+<!-- Active: 今夜 -->
+<a class="flex flex-col items-center justify-center text-[#1f3830] scale-110 transition-all duration-300 ease-out active:scale-95" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="bedtime" style="font-variation-settings: 'FILL' 1;">bedtime</span>
+<span class="font-body text-xs font-medium tracking-tight mt-0.5">今夜</span>
+</a>
+<!-- Inactive: 历史 -->
+<a class="flex flex-col items-center justify-center text-[#1f3830]/40 hover:text-[#1f3830] transition-all duration-300 ease-out active:scale-95" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="auto_stories">auto_stories</span>
+<span class="font-body text-xs font-medium tracking-tight mt-0.5">历史</span>
+</a>
+<!-- Inactive: 设置 -->
+<a class="flex flex-col items-center justify-center text-[#1f3830]/40 hover:text-[#1f3830] transition-all duration-300 ease-out active:scale-95" href="#">
+<span class="material-symbols-outlined text-[24px]" data-icon="settings">settings</span>
+<span class="font-body text-xs font-medium tracking-tight mt-0.5">设置</span>
+</a>
+</div>
+</nav>
+<!-- Aesthetic Polish: Grain Texture Overlay -->
+<div class="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-multiply" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuA9bkCyMaeIk2vdRshkW9HMQvVSLNx-L0p7MuKaWCKtga5zVx8NK1bfTHKjw8x7hv6qIBIogixTyhnMGLwv0q15hvDf5P00U6B_9Yuq-9TqszsFtsDhSV6ZD1Ta7OQzJwXggAYpAVqvJKIi026OvzTIQmrhUciYLU7VhWKrAGU3rYN1eSxUBNLNyeKWZ-pVLwffg67g5Zp-V0z2Se7L5EyeMNPK3HL1ktyPZfzGjfGdAl6h1J5xCzCW2REUEp0txxdXCGpZr5qI0CFf');">
+</div>
+</body></html>
