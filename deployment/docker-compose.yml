@@ -1,0 +1,74 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: nightly-pick-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-nightly_pick}
+      POSTGRES_USER: ${POSTGRES_USER:-nightly_pick}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nightly_pick}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:15432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nightly_pick} -d ${POSTGRES_DB:-nightly_pick}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nightly-pick-network
+
+  agent:
+    build:
+      context: ../nightly-pick-agent
+      dockerfile: Dockerfile
+    container_name: nightly-pick-agent
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:18080:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+    networks:
+      - nightly-pick-network
+
+  server:
+    build:
+      context: ../nightly-pick-server
+      dockerfile: Dockerfile
+    container_name: nightly-pick-server
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-nightly_pick}
+      DB_USERNAME: ${POSTGRES_USER:-nightly_pick}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-nightly_pick}
+      AGENT_BASE_URL: http://agent:8000
+      BUSINESS_DAY_RESET_HOUR: ${BUSINESS_DAY_RESET_HOUR:-6}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      agent:
+        condition: service_started
+    ports:
+      - "127.0.0.1:18081:8080"
+    healthcheck:
+      test: ["CMD", "bash", "-lc", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nightly-pick-network
+
+networks:
+  nightly-pick-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
