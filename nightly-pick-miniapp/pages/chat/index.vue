@@ -97,6 +97,7 @@ let recorderManager = null
 let autosaveTimer = null
 let recordingProgressTimer = null
 let assistantAudioContext = null
+let assistantAudioFilePath = ""
 
 export default {
   data() {
@@ -421,13 +422,51 @@ export default {
     },
     playAssistantAudio(audioUrl) {
       if (!audioUrl) return
-      this.stopAssistantAudio()
-      assistantAudioContext = uni.createInnerAudioContext()
-      assistantAudioContext.autoplay = true
-      assistantAudioContext.src = audioUrl
-      assistantAudioContext.obeyMuteSwitch = false
-      assistantAudioContext.onError((error) => {
-        console.error("[nightly-pick][assistant-audio] error", error)
+      this.prepareAssistantAudio(audioUrl)
+        .then((playableUrl) => {
+          this.stopAssistantAudio()
+          assistantAudioContext = uni.createInnerAudioContext()
+          assistantAudioContext.autoplay = true
+          assistantAudioContext.src = playableUrl
+          assistantAudioContext.obeyMuteSwitch = false
+          assistantAudioContext.onError((error) => {
+            console.error("[nightly-pick][assistant-audio] error", error)
+            showError("语音回复播放失败")
+          })
+        })
+        .catch((error) => {
+          console.error("[nightly-pick][assistant-audio] prepare error", error)
+          showError("语音回复准备失败")
+        })
+    },
+    prepareAssistantAudio(audioUrl) {
+      if (!audioUrl.startsWith("data:audio/")) {
+        return Promise.resolve(audioUrl)
+      }
+      const [, mimeType = "audio/mpeg", base64Content = ""] =
+        audioUrl.match(/^data:(audio\/[^;]+);base64,(.+)$/) || []
+      if (!base64Content) {
+        return Promise.reject(new Error("无效的语音数据"))
+      }
+      const fileExtension = mimeType.includes("mpeg") ? "mp3" : mimeType.split("/")[1] || "mp3"
+      const userDataPath =
+        typeof wx !== "undefined" && wx.env && wx.env.USER_DATA_PATH ? wx.env.USER_DATA_PATH : ""
+      if (!userDataPath || typeof wx === "undefined" || !wx.getFileSystemManager) {
+        return Promise.reject(new Error("当前环境不支持本地语音缓存"))
+      }
+      const filePath = `${userDataPath}/nightly-reply-${Date.now()}.${fileExtension}`
+      const fileSystemManager = wx.getFileSystemManager()
+      return new Promise((resolve, reject) => {
+        fileSystemManager.writeFile({
+          filePath,
+          data: base64Content,
+          encoding: "base64",
+          success: () => {
+            assistantAudioFilePath = filePath
+            resolve(filePath)
+          },
+          fail: reject,
+        })
       })
     },
     stopAssistantAudio() {
