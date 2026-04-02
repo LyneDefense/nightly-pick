@@ -48,8 +48,8 @@
       <view class="voice-center">
         <view class="voice-record-stack">
           <view class="recording-hint">{{ recordingHint }}</view>
-          <view class="mic-progress-ring" :style="recordingRingStyle">
-            <button class="mic-button" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
+          <view :class="['mic-progress-ring', { recording: isRecording }]" :style="recordingRingStyle">
+            <button :class="['mic-button', { recording: isRecording }]" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
               <text class="mic-icon">{{ isRecording ? recordingCountdownLabel : "●" }}</text>
             </button>
           </view>
@@ -144,7 +144,9 @@ export default {
     recordingRingStyle() {
       const percent = this.recordingProgressPercent
       return {
-        background: `conic-gradient(#21473d 0 ${percent}%, rgba(33, 71, 61, 0.12) ${percent}% 100%)`,
+        background: this.isRecording
+          ? `conic-gradient(#21473d 0 ${percent}%, rgba(33, 71, 61, 0.18) ${percent}% 100%)`
+          : "conic-gradient(rgba(33, 71, 61, 0.16) 0 100%)",
       }
     },
     recordingCountdownLabel() {
@@ -743,6 +745,13 @@ export default {
   align-items: center;
   justify-content: center;
   transition: background 0.18s linear;
+  box-shadow: inset 0 0 0 2rpx rgba(33, 71, 61, 0.08);
+}
+
+.mic-progress-ring.recording {
+  box-shadow:
+    0 0 0 10rpx rgba(33, 71, 61, 0.08),
+    0 18rpx 36rpx rgba(31, 56, 48, 0.12);
 }
 
 .mic-button {
@@ -755,6 +764,13 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.mic-button.recording {
+  transform: scale(0.96);
+  background: #21473d;
+  box-shadow: 0 10rpx 24rpx rgba(31, 56, 48, 0.2);
 }
 
 .mic-icon {
