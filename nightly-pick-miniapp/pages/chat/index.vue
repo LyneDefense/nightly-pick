@@ -48,7 +48,8 @@
       <view class="voice-center">
         <view class="voice-record-stack">
           <view class="recording-hint">{{ recordingHint }}</view>
-          <view :class="['mic-progress-ring', { recording: isRecording }]" :style="recordingRingStyle">
+          <view :class="['mic-progress-ring', { recording: isRecording }]">
+            <canvas canvas-id="recording-progress-ring" class="mic-progress-canvas"></canvas>
             <button :class="['mic-button', { recording: isRecording }]" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
               <text class="mic-icon">{{ isRecording ? recordingCountdownLabel : "●" }}</text>
             </button>
@@ -141,14 +142,6 @@ export default {
     recordingProgressPercent() {
       return Math.min(100, Math.round((this.recordingElapsedMs / this.recordingMaxDurationMs) * 100))
     },
-    recordingRingStyle() {
-      const percent = this.recordingProgressPercent
-      return {
-        background: this.isRecording
-          ? `conic-gradient(#21473d 0 ${percent}%, rgba(33, 71, 61, 0.18) ${percent}% 100%)`
-          : "conic-gradient(rgba(33, 71, 61, 0.16) 0 100%)",
-      }
-    },
     recordingCountdownLabel() {
       const remainingMs = Math.max(0, this.recordingMaxDurationMs - this.recordingElapsedMs)
       return `${Math.max(1, Math.ceil(remainingMs / 1000))}`
@@ -173,6 +166,11 @@ export default {
   onShow() {
     this.initializePage()
   },
+  mounted() {
+    this.$nextTick(() => {
+      this.drawRecordingRing(0)
+    })
+  },
   async onUnload() {
     this.stopRecording({ force: true })
     this.stopAssistantAudio()
@@ -196,6 +194,9 @@ export default {
         await this.ensureSession()
         this.setupRecorder()
         this.bumpScroll()
+        this.$nextTick(() => {
+          this.drawRecordingRing(this.recordingProgressPercent)
+        })
       } catch (error) {
         showError(error && error.message ? error.message : "初始化会话失败")
       }
@@ -317,6 +318,7 @@ export default {
       this.isRecording = true
       this.recordingHint = "松开发送，20 秒后自动发出"
       this.recordingElapsedMs = 0
+      this.drawRecordingRing(0)
       this.startRecordingProgress()
       recorderManager.start({
         duration: this.recordingMaxDurationMs,
@@ -338,6 +340,7 @@ export default {
       recordingProgressTimer = setInterval(() => {
         const nextElapsed = Math.min(this.recordingElapsedMs + 100, this.recordingMaxDurationMs)
         this.recordingElapsedMs = nextElapsed
+        this.drawRecordingRing(this.recordingProgressPercent)
         if (nextElapsed >= this.recordingMaxDurationMs) {
           this.stopRecording()
         }
@@ -350,6 +353,36 @@ export default {
         recordingProgressTimer = null
       }
       this.recordingElapsedMs = 0
+      this.drawRecordingRing(0)
+    },
+    drawRecordingRing(percent = 0) {
+      const context = uni.createCanvasContext("recording-progress-ring", this)
+      const size = 156
+      const lineWidth = 10
+      const center = size / 2
+      const radius = center - lineWidth
+      const startAngle = -Math.PI / 2
+      const endAngle = startAngle + Math.PI * 2 * (Math.max(0, Math.min(100, percent)) / 100)
+
+      context.clearRect(0, 0, size, size)
+
+      context.beginPath()
+      context.setLineWidth(lineWidth)
+      context.setStrokeStyle("rgba(33, 71, 61, 0.34)")
+      context.setLineCap("round")
+      context.arc(center, center, radius, 0, Math.PI * 2, false)
+      context.stroke()
+
+      if (percent > 0) {
+        context.beginPath()
+        context.setLineWidth(lineWidth)
+        context.setStrokeStyle("#21473d")
+        context.setLineCap("round")
+        context.arc(center, center, radius, startAngle, endAngle, false)
+        context.stroke()
+      }
+
+      context.draw()
     },
     async handleComplete() {
       try {
@@ -739,19 +772,25 @@ export default {
   width: 156rpx;
   height: 156rpx;
   border-radius: 50%;
-  padding: 12rpx;
-  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.18s linear;
-  box-shadow: inset 0 0 0 2rpx rgba(33, 71, 61, 0.08);
+  box-shadow: inset 0 0 0 2rpx rgba(33, 71, 61, 0.16);
+  position: relative;
 }
 
 .mic-progress-ring.recording {
   box-shadow:
     0 0 0 10rpx rgba(33, 71, 61, 0.08),
     0 18rpx 36rpx rgba(31, 56, 48, 0.12);
+}
+
+.mic-progress-canvas {
+  position: absolute;
+  inset: 0;
+  width: 156rpx;
+  height: 156rpx;
+  pointer-events: none;
 }
 
 .mic-button {
