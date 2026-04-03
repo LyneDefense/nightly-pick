@@ -16,6 +16,8 @@ from app.models import (
 )
 from app.providers.base import SpeechSynthesizeProvider, SpeechTranscribeProvider, TextProvider
 
+MAX_OPEN_LOOPS = 6
+
 
 class MockTextProvider(TextProvider):
     async def chat_reply(self, request: ChatReplyRequest) -> ChatReplyResponse:
@@ -118,7 +120,7 @@ class MockTextProvider(TextProvider):
         events = (request.plan.what_happened_today or [])[:3]
         if not events:
             events = ["完成了一次睡前复盘对话"]
-        open_loops = list(dict.fromkeys((request.plan.wanted_but_not_done or []) + (request.existing_open_loops or [])))[:4]
+        open_loops = list(dict.fromkeys((request.plan.wanted_but_not_done or []) + (request.existing_open_loops or [])))[:MAX_OPEN_LOOPS]
         if not open_loops:
             open_loops = ["还有一些细节值得明天继续展开"]
         return GenerateRecordResponse(

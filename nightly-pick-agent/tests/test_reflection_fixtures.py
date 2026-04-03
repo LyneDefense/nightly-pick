@@ -55,6 +55,10 @@ class ReflectionFixtureTests(unittest.TestCase):
                     self.assertGreaterEqual(
                         len(record.open_loops), expected_writer["open_loops_min"]
                     )
+                if "open_loops_max" in expected_writer:
+                    self.assertLessEqual(
+                        len(record.open_loops), expected_writer["open_loops_max"]
+                    )
 
 
 if __name__ == "__main__":

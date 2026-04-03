@@ -28,10 +28,19 @@
       </view>
 
       <view class="content-section" v-if="displayOpenLoops.length">
-        <text class="section-label">挂 心 的 事</text>
-        <view class="loop-card" v-for="(item, index) in displayOpenLoops" :key="index">
-          <text class="loop-icon">◌</text>
-          <text class="loop-copy">{{ item }}</text>
+        <text class="section-label">还 没 放 下</text>
+        <view class="loops-panel">
+          <view class="loops-panel-head">
+            <text class="loops-panel-title">今晚还留在心里的几件事</text>
+            <text class="loops-panel-count">{{ displayOpenLoops.length }} 件</text>
+          </view>
+          <view class="loop-card" v-for="(item, index) in visibleOpenLoops" :key="index">
+            <view class="loop-marker"></view>
+            <text class="loop-copy">{{ item }}</text>
+          </view>
+          <button v-if="hasMoreOpenLoops" class="loop-toggle" @click="toggleOpenLoops">
+            {{ showAllOpenLoops ? "收起一点" : `再看 ${hiddenOpenLoopCount} 件` }}
+          </button>
         </view>
       </view>
     </view>
@@ -65,6 +74,7 @@ export default {
       currentRecordId: "",
       routeSource: "history",
       editableSummary: "",
+      showAllOpenLoops: false,
       state: appState,
     }
   },
@@ -79,7 +89,17 @@ export default {
       if (!this.record || !Array.isArray(this.record.openLoops) || !this.record.openLoops.length) {
         return ["明天10点的项目评审", "给家里打个电话"]
       }
-      return this.record.openLoops.slice(0, 3)
+      return this.record.openLoops
+    },
+    visibleOpenLoops() {
+      if (this.showAllOpenLoops) return this.displayOpenLoops
+      return this.displayOpenLoops.slice(0, 3)
+    },
+    hasMoreOpenLoops() {
+      return this.displayOpenLoops.length > 3
+    },
+    hiddenOpenLoopCount() {
+      return Math.max(this.displayOpenLoops.length - 3, 0)
     },
     displayHighlight() {
       if (!this.record || !this.record.highlight) {
@@ -110,9 +130,11 @@ export default {
         if (cachedRecord) {
           this.record = cachedRecord
           this.editableSummary = this.record.summary || ""
+          this.showAllOpenLoops = false
         }
         this.record = await getRecord(String(recordId))
         this.editableSummary = this.record.summary || ""
+        this.showAllOpenLoops = false
         upsertRecord(this.record)
       } catch (error) {
         showError(error && error.message ? error.message : "加载记录失败")
@@ -153,6 +175,9 @@ export default {
         return
       }
       uni.reLaunch({ url: "/pages/history/index" })
+    },
+    toggleOpenLoops() {
+      this.showAllOpenLoops = !this.showAllOpenLoops
     },
   },
 }
@@ -264,24 +289,75 @@ export default {
   font-weight: 600;
 }
 
-.loop-card {
-  margin-top: 16rpx;
-  padding: 22rpx 24rpx;
-  border-radius: 999rpx;
-  background: rgba(255, 255, 255, 0.76);
+.loops-panel {
+  margin-top: 18rpx;
+  padding: 24rpx;
+  border-radius: 30rpx;
+  background:
+    linear-gradient(180deg, rgba(238, 244, 236, 0.9) 0%, rgba(247, 243, 233, 0.96) 100%);
+  box-shadow: inset 0 0 0 1rpx rgba(31, 56, 48, 0.05);
+}
+
+.loops-panel-head {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16rpx;
 }
 
-.loop-icon {
-  font-size: 22rpx;
-  color: rgba(31, 56, 48, 0.34);
+.loops-panel-title {
+  font-size: 24rpx;
+  color: rgba(31, 56, 48, 0.58);
+  font-weight: 600;
+}
+
+.loops-panel-count {
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: rgba(31, 56, 48, 0.08);
+  color: rgba(31, 56, 48, 0.52);
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+.loop-card {
+  margin-top: 16rpx;
+  padding: 22rpx 22rpx 22rpx 20rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 252, 246, 0.92);
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  box-shadow:
+    0 10rpx 24rpx rgba(205, 195, 170, 0.12),
+    inset 0 0 0 1rpx rgba(31, 56, 48, 0.04);
+}
+
+.loop-marker {
+  width: 14rpx;
+  height: 14rpx;
+  margin-top: 10rpx;
+  border-radius: 50%;
+  background: #8fa394;
+  box-shadow: 0 0 0 8rpx rgba(143, 163, 148, 0.14);
+  flex-shrink: 0;
 }
 
 .loop-copy {
+  flex: 1;
   font-size: 28rpx;
-  color: rgba(31, 56, 48, 0.78);
+  line-height: 1.7;
+  color: rgba(31, 56, 48, 0.82);
+}
+
+.loop-toggle {
+  margin-top: 18rpx;
+  min-height: 72rpx;
+  border-radius: 999rpx;
+  background: rgba(31, 56, 48, 0.08);
+  color: #315145;
+  font-size: 24rpx;
+  font-weight: 600;
 }
 
 .detail-actions {

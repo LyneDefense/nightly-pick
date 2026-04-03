@@ -35,6 +35,8 @@ from app.providers.base import SpeechSynthesizeProvider, SpeechTranscribeProvide
 
 logger = logging.getLogger("nightly-pick-agent.minimax")
 
+MAX_OPEN_LOOPS = 6
+
 def build_httpx_client(timeout_seconds: float) -> httpx.AsyncClient:
     return httpx.AsyncClient(timeout=timeout_seconds, trust_env=False)
 
@@ -252,7 +254,7 @@ highlight: string
             summary=payload.get("summary", ""),
             events=self._ensure_list(payload.get("events")),
             emotions=self._ensure_list(payload.get("emotions")),
-            open_loops=self._ensure_list(payload.get("open_loops")),
+            open_loops=self._normalize_open_loops(payload.get("open_loops")),
             highlight=payload.get("highlight", ""),
         )
         logger.info(
@@ -366,6 +368,18 @@ highlight: string
         if isinstance(value, list):
             return [str(item) for item in value]
         return []
+
+    @staticmethod
+    def _normalize_open_loops(value: object) -> list[str]:
+        loops: list[str] = []
+        for item in MiniMaxTextProvider._ensure_list(value):
+            normalized = re.sub(r"\s+", " ", str(item)).strip(" \n\t-•·、，。;；")
+            if not normalized or normalized in loops:
+                continue
+            loops.append(normalized)
+            if len(loops) >= MAX_OPEN_LOOPS:
+                break
+        return loops
 
     @staticmethod
     def _existing_record_context(title, summary, highlight, events, emotions, open_loops) -> str:

@@ -23,7 +23,8 @@
     "expected_writer": {
       "summary_contains": ["我", "想做但没做"],
       "summary_not_contains": ["用户", "assistant:", "user:", "后来"],
-      "open_loops_min": 1
+      "open_loops_min": 1,
+      "open_loops_max": 6
     }
   },
   {
