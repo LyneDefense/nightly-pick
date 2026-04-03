@@ -6,6 +6,7 @@ public record SendMessageResponse(
         String assistantReply,
         String assistantAudioUrl,
         boolean shouldEnd,
-        String stage
+        String stage,
+        ConversationSummaryStatusResponse summaryStatus
 ) {
 }

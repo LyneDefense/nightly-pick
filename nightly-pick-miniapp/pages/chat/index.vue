@@ -6,7 +6,7 @@
         <text class="chat-status">正在记录...</text>
         <text v-if="inputMode === 'text'" class="chat-brand">夜拾</text>
       </view>
-      <button class="finish-button" :disabled="loading || !userHasSpoken" @click="handleComplete">完成</button>
+      <view class="topbar-spacer"></view>
     </view>
 
     <scroll-view class="chat-scroll" scroll-y :scroll-into-view="scrollTarget" scroll-with-animation>
@@ -33,6 +33,26 @@
         <view id="message-anchor"></view>
       </view>
     </scroll-view>
+
+    <view v-if="shouldShowSummaryCard" class="summary-action-card">
+      <view class="summary-action-copy">
+        <text class="summary-action-title">{{ summaryCardTitle }}</text>
+        <text class="summary-action-desc">{{ summaryCardDescription }}</text>
+      </view>
+      <button
+        v-if="summaryCardButtonLabel"
+        class="summary-action-button"
+        :disabled="summaryActionLoading"
+        @click="handleSummaryAction"
+      >
+        {{ summaryCardButtonLabel }}
+      </button>
+      <view v-else class="summary-action-loading">
+        <view class="summary-loading-dot"></view>
+        <view class="summary-loading-dot"></view>
+        <view class="summary-loading-dot"></view>
+      </view>
+    </view>
 
     <view v-if="inputMode === 'voice'" class="voice-composer">
       <button class="mode-switch voice-switch" @click="toggleInputMode">
@@ -84,16 +104,19 @@
 </template>
 
 <script>
-import { autosaveConversation, completeConversation, createConversation, getActiveConversation, getConversation, sendMessage } from "../../services/conversation"
+import { createConversation, getActiveConversation, getConversation, requestConversationSummary, sendMessage } from "../../services/conversation"
 import { transcribeAudio, uploadAudio } from "../../services/audio"
+import { getRecords } from "../../services/records"
 import { getSettings } from "../../services/settings"
 import {
   appState,
   appendChatMessage,
   clearActiveConversation,
   hydrateConversation,
+  setConversationSummary,
   setActiveSessionId,
   setChatInput,
+  setRecords,
   setUser,
   updateConversationDraft,
 } from "../../stores/app-state"
@@ -101,10 +124,11 @@ import { isCurrentBusinessDate } from "../../utils/business-day"
 import { showError, showSuccess } from "../../utils/ui"
 
 let recorderManager = null
-let autosaveTimer = null
 let recordingProgressTimer = null
 let assistantAudioContext = null
 let assistantAudioFilePath = ""
+let summaryPollTimer = null
+let autoSummaryTimer = null
 
 export default {
   data() {
@@ -116,10 +140,11 @@ export default {
       recordingMaxDurationMs: 20000,
       ringCanvasSizePx: 156,
       recorderReady: false,
-      autoSavePending: false,
       defaultTime: "22:14",
       scrollTarget: "message-anchor",
       inputMode: "voice",
+      summaryActionLoading: false,
+      summaryActionTriggered: false,
       state: appState,
     }
   },
@@ -145,6 +170,14 @@ export default {
     },
     messages() {
       return this.state.chatState.messages
+    },
+    conversationSummary() {
+      return this.state.conversationSummary || {
+        status: "noRecordYet",
+        recordId: "",
+        userMessageCount: 0,
+        summarizedUserMessageCount: 0,
+      }
     },
     recordingProgressPercent() {
       return Math.min(100, Math.round((this.recordingElapsedMs / this.recordingMaxDurationMs) * 100))
@@ -175,6 +208,45 @@ export default {
         updateConversationDraft({ lastAutoSavedMessageCount: value || 0 })
       },
     },
+    unsummarizedUserMessages() {
+      const userMessages = this.messages.filter((message) => message.role === "user" && message.text)
+      return userMessages.slice(this.conversationSummary.summarizedUserMessageCount || 0)
+    },
+    unsummarizedCharCount() {
+      return this.unsummarizedUserMessages.reduce((sum, message) => sum + (message.text || "").trim().length, 0)
+    },
+    hasMeaningfulUnsummarizedContent() {
+      return this.unsummarizedUserMessages.length >= 2 || this.unsummarizedCharCount >= 12
+    },
+    shouldShowSummaryCard() {
+      if (this.conversationSummary.status === "recordGenerating") return true
+      if (this.conversationSummary.status === "recordNeedsRefresh") return this.hasMeaningfulUnsummarizedContent
+      if (this.conversationSummary.status === "noRecordYet") return this.hasRecoverableContent()
+      return false
+    },
+    summaryCardTitle() {
+      if (this.conversationSummary.status === "recordGenerating") {
+        return "正在整理刚才的内容"
+      }
+      if (this.conversationSummary.status === "recordNeedsRefresh") {
+        return "把刚才补充的也收进去"
+      }
+      return "把今晚收一下"
+    },
+    summaryCardDescription() {
+      if (this.conversationSummary.status === "recordGenerating") {
+        return "你可以继续聊，整理好了会自动更新。"
+      }
+      if (this.conversationSummary.status === "recordNeedsRefresh") {
+        return "刚才补充的这些，也可以顺手并进今晚那页。"
+      }
+      return "把刚才说到的，整理成今晚的一页。"
+    },
+    summaryCardButtonLabel() {
+      if (this.conversationSummary.status === "recordGenerating") return ""
+      if (this.conversationSummary.status === "recordNeedsRefresh") return "更新一下"
+      return "整理今晚"
+    },
   },
   onShow() {
     this.initializePage()
@@ -187,11 +259,7 @@ export default {
   async onUnload() {
     this.stopRecording({ force: true })
     this.stopAssistantAudio()
-    await this.tryAutoSaveConversation({ force: true })
-    if (autosaveTimer) {
-      clearTimeout(autosaveTimer)
-      autosaveTimer = null
-    }
+    this.clearSummaryTimers()
   },
   methods: {
     bubbleClass(message) {
@@ -207,6 +275,9 @@ export default {
         await this.restoreConversationIfNeeded()
         await this.ensureSession()
         this.setupRecorder()
+        if (this.conversationSummary.status === "recordGenerating") {
+          this.startSummaryStatusPolling(false)
+        }
         this.bumpScroll()
         this.$nextTick(() => {
           this.drawRecordingRing(this.recordingProgressPercent)
@@ -272,7 +343,11 @@ export default {
       }
       const activeConversation = await getActiveConversation()
       if (activeConversation && activeConversation.session) {
-        hydrateConversation(activeConversation.session, this.normalizeConversationMessages(activeConversation.messages))
+        hydrateConversation(
+          activeConversation.session,
+          this.normalizeConversationMessages(activeConversation.messages),
+          activeConversation.summaryStatus
+        )
       }
     },
     getRouteSessionId() {
@@ -284,17 +359,23 @@ export default {
     async loadConversation(sessionId) {
       const response = await getConversation(sessionId)
       if (!response || !response.session) return
-      hydrateConversation(response.session, this.normalizeConversationMessages(response.messages))
+      hydrateConversation(
+        response.session,
+        this.normalizeConversationMessages(response.messages),
+        response.summaryStatus
+      )
     },
     async ensureSession() {
       if (this.sessionId) return
       const response = await createConversation()
       this.sessionId = response.sessionId
+      setConversationSummary(response.summaryStatus)
     },
     async handleSend(inputTypeOverride, explicitText) {
       const draftText = typeof explicitText === "string" ? explicitText : this.inputValue
       if (!draftText.trim() || this.loading) return
       await this.ensureSession()
+      this.clearAutoSummaryTimer()
       this.loading = true
       const text = draftText.trim()
       const inputType = inputTypeOverride || this.inputMode
@@ -318,10 +399,11 @@ export default {
         } else {
           this.stopAssistantAudio()
         }
+        setConversationSummary(response.summaryStatus)
         this.inputMode = inputType === "voice" ? "voice" : "text"
         this.bumpScroll()
         if (response.shouldEnd || response.stage === "closing") {
-          this.scheduleAutoSaveConversation()
+          this.scheduleAutoSummary()
         }
       } catch (error) {
         showError(error && error.message ? error.message : "发送失败")
@@ -405,21 +487,10 @@ export default {
 
       context.draw()
     },
-    async handleComplete() {
-      try {
-        await this.ensureSession()
-        if (autosaveTimer) {
-          clearTimeout(autosaveTimer)
-          autosaveTimer = null
-        }
-        const response = await completeConversation(this.sessionId)
-        this.lastAutoSavedMessageCount = this.messages.length
-        clearActiveConversation()
-        showSuccess(response.notice || "已生成今夜整理")
-        uni.redirectTo({ url: `/pages/record-detail/index?recordId=${response.recordId}&source=chat` })
-      } catch (error) {
-        showError(error && error.message ? error.message : "生成记录失败")
-      }
+    async handleSummaryAction() {
+      if (this.summaryActionLoading || !this.sessionId) return
+      this.clearAutoSummaryTimer()
+      await this.requestSummary({ userInitiated: true })
     },
     ensureRecordPermission() {
       return new Promise((resolve) => {
@@ -535,48 +606,92 @@ export default {
       }
       assistantAudioContext = null
     },
-    scheduleAutoSaveConversation() {
-      if (!this.shouldAutosaveQuietly()) return
-      if (autosaveTimer) clearTimeout(autosaveTimer)
-      autosaveTimer = setTimeout(() => {
-        this.tryAutoSaveConversation()
-      }, 1200)
-    },
-    shouldAutosaveQuietly() {
-      const delta = this.messages.length - this.lastAutoSavedMessageCount
-      const userMessages = this.messages.filter((message) => message.role === "user")
-      const totalUserChars = userMessages.reduce((sum, message) => sum + (message.text || "").trim().length, 0)
-      return delta >= 2 && (userMessages.length >= 2 || totalUserChars >= 30)
-    },
     hasRecoverableContent() {
       const userMessages = this.messages.filter((message) => message.role === "user")
       const totalUserChars = userMessages.reduce((sum, message) => sum + (message.text || "").trim().length, 0)
       return userMessages.length > 0 && totalUserChars >= 8
     },
-    async tryAutoSaveConversation({ force = false } = {}) {
-      if (!this.sessionId || !this.userHasSpoken || this.autoSavePending) return
-      if (this.messages.length <= this.lastAutoSavedMessageCount) return
-      if (force) {
-        if (!this.hasRecoverableContent()) return
-      } else if (!this.shouldAutosaveQuietly()) {
-        return
-      }
-      this.autoSavePending = true
+    scheduleAutoSummary() {
+      if (!this.sessionId || !this.hasMeaningfulUnsummarizedContent) return
+      if (!["noRecordYet", "recordNeedsRefresh"].includes(this.conversationSummary.status)) return
+      this.clearAutoSummaryTimer()
+      autoSummaryTimer = setTimeout(() => {
+        this.requestSummary({ userInitiated: false })
+      }, 12000)
+    },
+    clearAutoSummaryTimer() {
+      if (!autoSummaryTimer) return
+      clearTimeout(autoSummaryTimer)
+      autoSummaryTimer = null
+    },
+    clearSummaryPollTimer() {
+      if (!summaryPollTimer) return
+      clearInterval(summaryPollTimer)
+      summaryPollTimer = null
+    },
+    clearSummaryTimers() {
+      this.clearAutoSummaryTimer()
+      this.clearSummaryPollTimer()
+    },
+    async requestSummary({ userInitiated = false } = {}) {
+      if (!this.sessionId || this.summaryActionLoading) return
+      this.summaryActionLoading = true
+      this.summaryActionTriggered = userInitiated
       try {
-        await autosaveConversation(this.sessionId)
-        this.lastAutoSavedMessageCount = this.messages.length
+        const response = await requestConversationSummary(this.sessionId)
+        setConversationSummary(response.summaryStatus)
+        if (response.summaryStatus && response.summaryStatus.status === "recordGenerating") {
+          this.startSummaryStatusPolling(userInitiated)
+        } else if (userInitiated) {
+          showSuccess(response.notice || "已为你整理")
+        }
+      } catch (error) {
+        if (userInitiated) {
+          showError(error && error.message ? error.message : "整理失败")
+        }
       } finally {
-        this.autoSavePending = false
+        this.summaryActionLoading = false
+      }
+    },
+    startSummaryStatusPolling(userInitiated = false) {
+      this.clearSummaryPollTimer()
+      summaryPollTimer = setInterval(async () => {
+        try {
+          const response = await getConversation(this.sessionId)
+          if (!response || !response.session) return
+          hydrateConversation(
+            response.session,
+            this.normalizeConversationMessages(response.messages),
+            response.summaryStatus
+          )
+          if (response.summaryStatus && response.summaryStatus.status !== "recordGenerating") {
+            this.clearSummaryPollTimer()
+            await this.refreshRecords()
+            if ((this.summaryActionTriggered || userInitiated) && response.summaryStatus.status === "recordUpToDate") {
+              showSuccess("已更新今晚整理")
+            }
+            this.summaryActionTriggered = false
+          }
+        } catch (error) {
+          this.clearSummaryPollTimer()
+          if (this.summaryActionTriggered || userInitiated) {
+            showError("整理状态更新失败")
+          }
+          this.summaryActionTriggered = false
+        }
+      }, 1500)
+    },
+    async refreshRecords() {
+      try {
+        setRecords(await getRecords())
+      } catch (error) {
+        console.error("[nightly-pick][records] refresh failed", error)
       }
     },
     async goBack() {
       this.stopRecording({ force: true })
       this.stopAssistantAudio()
-      if (autosaveTimer) {
-        clearTimeout(autosaveTimer)
-        autosaveTimer = null
-      }
-      await this.tryAutoSaveConversation({ force: true })
+      this.clearSummaryTimers()
       uni.reLaunch({ url: "/pages/home/index" })
     },
     normalizeConversationMessages(messages) {
@@ -628,8 +743,7 @@ export default {
   justify-content: space-between;
 }
 
-.back-button,
-.finish-button {
+.back-button {
   min-height: auto;
   background: transparent;
 }
@@ -661,14 +775,6 @@ export default {
   font-weight: 700;
 }
 
-.finish-button {
-  padding: 12rpx 24rpx;
-  border-radius: 999rpx;
-  background: #21473d;
-  color: #fff;
-  font-size: 22rpx;
-}
-
 .topbar-spacer {
   width: 56rpx;
 }
@@ -679,7 +785,71 @@ export default {
 }
 
 .chat-scroll-inner {
-  padding: 20rpx 24rpx 320rpx;
+  padding: 20rpx 24rpx 420rpx;
+}
+
+.summary-action-card {
+  position: fixed;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: calc(var(--np-safe-bottom) + 198rpx);
+  z-index: 18;
+  padding: 24rpx 24rpx 22rpx;
+  border-radius: 28rpx;
+  background: rgba(255, 252, 246, 0.96);
+  box-shadow:
+    0 16rpx 36rpx rgba(31, 56, 48, 0.08),
+    inset 0 0 0 1rpx rgba(31, 56, 48, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.summary-action-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.summary-action-title {
+  display: block;
+  font-size: 28rpx;
+  color: rgba(31, 56, 48, 0.9);
+  font-weight: 600;
+}
+
+.summary-action-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.6;
+  color: rgba(31, 56, 48, 0.54);
+}
+
+.summary-action-button {
+  min-height: 72rpx;
+  padding: 0 28rpx;
+  border-radius: 999rpx;
+  background: #21473d;
+  color: #fff;
+  font-size: 24rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.summary-action-loading {
+  min-width: 108rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  flex-shrink: 0;
+}
+
+.summary-loading-dot {
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  background: rgba(31, 56, 48, 0.4);
 }
 
 .message-wrap {

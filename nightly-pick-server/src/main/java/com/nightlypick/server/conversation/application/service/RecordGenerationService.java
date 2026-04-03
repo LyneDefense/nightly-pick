@@ -172,6 +172,10 @@ public class RecordGenerationService {
         return new SavedRecordResult(savedRecord, existingTodayRecord != null);
     }
 
+    public LocalDate currentBusinessDate() {
+        return businessDayClock.currentBusinessDate();
+    }
+
     private NormalizedRecordContent normalizeGeneratedRecord(
             AgentGenerateRecordResponse generated,
             List<ConversationMessage> messages,

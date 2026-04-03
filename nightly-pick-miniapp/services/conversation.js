@@ -24,6 +24,14 @@ export function completeConversation(sessionId) {
   })
 }
 
+export function requestConversationSummary(sessionId) {
+  return request({
+    url: `/conversations/${sessionId}/summary`,
+    method: "POST",
+    sessionId,
+  })
+}
+
 export function autosaveConversation(sessionId) {
   return request({
     url: `/conversations/${sessionId}/autosave`,

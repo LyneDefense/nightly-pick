@@ -6,11 +6,14 @@ import com.nightlypick.server.agent.dto.AgentSynthesizeSpeechRequest;
 import com.nightlypick.server.agent.dto.AgentSynthesizeSpeechResponse;
 import com.nightlypick.server.agent.service.AgentClient;
 import com.nightlypick.server.conversation.application.store.ConversationSessionStore;
+import com.nightlypick.server.conversation.api.ConversationSummaryStatusResponse;
 import com.nightlypick.server.conversation.application.store.MemoryStore;
+import com.nightlypick.server.conversation.application.store.DailyRecordStore;
 import com.nightlypick.server.conversation.application.store.UserProfileStore;
 import com.nightlypick.server.conversation.api.SendMessageRequest;
 import com.nightlypick.server.conversation.api.SendMessageResponse;
 import com.nightlypick.server.conversation.domain.ConversationMessage;
+import com.nightlypick.server.common.time.BusinessDayClock;
 import com.nightlypick.server.user.application.UserContext;
 import com.nightlypick.server.user.domain.UserProfile;
 import org.slf4j.Logger;
@@ -26,17 +29,21 @@ public class ConversationReplyService {
     private static final Logger log = LoggerFactory.getLogger(ConversationReplyService.class);
 
     private final ConversationSessionStore conversationSessionStore;
+    private final DailyRecordStore dailyRecordStore;
     private final UserProfileStore userProfileStore;
     private final MemoryStore memoryStore;
     private final AgentClient agentClient;
     private final UserContext userContext;
+    private final BusinessDayClock businessDayClock;
 
-    public ConversationReplyService(ConversationSessionStore conversationSessionStore, UserProfileStore userProfileStore, MemoryStore memoryStore, AgentClient agentClient, UserContext userContext) {
+    public ConversationReplyService(ConversationSessionStore conversationSessionStore, DailyRecordStore dailyRecordStore, UserProfileStore userProfileStore, MemoryStore memoryStore, AgentClient agentClient, UserContext userContext, BusinessDayClock businessDayClock) {
         this.conversationSessionStore = conversationSessionStore;
+        this.dailyRecordStore = dailyRecordStore;
         this.userProfileStore = userProfileStore;
         this.memoryStore = memoryStore;
         this.agentClient = agentClient;
         this.userContext = userContext;
+        this.businessDayClock = businessDayClock;
     }
 
     public SendMessageResponse sendMessage(String sessionId, SendMessageRequest request) {
@@ -95,6 +102,16 @@ public class ConversationReplyService {
             }
         }
         log.info("用户消息处理完成 sessionId={} elapsedMs={}", sessionId, System.currentTimeMillis() - startedAt);
-        return new SendMessageResponse(sessionId, request.text(), reply.replyText(), assistantAudioUrl, reply.shouldEnd(), reply.stage());
+        var todayRecord = dailyRecordStore.findRecordByUserAndDate(userId, businessDayClock.currentBusinessDate());
+        String summaryStatus = todayRecord == null ? "noRecordYet" : "recordNeedsRefresh";
+        return new SendMessageResponse(
+                sessionId,
+                request.text(),
+                reply.replyText(),
+                assistantAudioUrl,
+                reply.shouldEnd(),
+                reply.stage(),
+                new ConversationSummaryStatusResponse(summaryStatus, todayRecord == null ? null : todayRecord.id(), 0, 0)
+        );
     }
 }

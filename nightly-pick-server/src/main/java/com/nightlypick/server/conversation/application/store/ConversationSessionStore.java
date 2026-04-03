@@ -52,6 +52,10 @@ public class ConversationSessionStore {
         entity.setUserId(userId);
         entity.setStatus("active");
         entity.setStartedAt(OffsetDateTime.now());
+        entity.setUserMessageCount(0);
+        entity.setSummarizedUserMessageCount(0);
+        entity.setSummaryJobStatus("idle");
+        entity.setSummaryJobTargetUserMessageCount(0);
         sessionMapper.insert(entity);
         log.info("已创建会话实体 sessionId={} userId={} startedAt={}", entity.getId(), userId, entity.getStartedAt());
         return toDomain(entity);
@@ -94,6 +98,10 @@ public class ConversationSessionStore {
         entity.setStatus("completed");
         entity.setStartedAt(session.startedAt());
         entity.setEndedAt(OffsetDateTime.now());
+        entity.setUserMessageCount(session.userMessageCount());
+        entity.setSummarizedUserMessageCount(session.summarizedUserMessageCount());
+        entity.setSummaryJobStatus(session.summaryJobStatus());
+        entity.setSummaryJobTargetUserMessageCount(session.summaryJobTargetUserMessageCount());
         sessionMapper.updateById(entity);
         log.info("已完成会话 sessionId={} endedAt={}", sessionId, entity.getEndedAt());
     }
@@ -108,12 +116,44 @@ public class ConversationSessionStore {
         entity.setText(text);
         entity.setCreatedAt(OffsetDateTime.now());
         messageMapper.insert(entity);
+        if ("user".equals(role)) {
+            incrementUserMessageCount(sessionId);
+        }
         log.info("已写入会话消息 sessionId={} role={} inputType={} textLength={}",
                 sessionId,
                 role,
                 inputType,
                 text == null ? 0 : text.length());
         return toDomain(entity);
+    }
+
+    public ConversationSession markSummaryJobRunning(String sessionId) {
+        ConversationSession session = getSession(sessionId);
+        ConversationSessionEntity entity = copySession(session);
+        entity.setSummaryJobStatus("running");
+        entity.setSummaryJobTargetUserMessageCount(session.userMessageCount());
+        sessionMapper.updateById(entity);
+        log.info("会话总结任务已标记为运行中 sessionId={} targetUserMessageCount={}", sessionId, entity.getSummaryJobTargetUserMessageCount());
+        return toDomain(entity);
+    }
+
+    public void markSummaryJobFinished(String sessionId, int summarizedUserMessageCount) {
+        ConversationSession session = getSession(sessionId);
+        ConversationSessionEntity entity = copySession(session);
+        entity.setSummaryJobStatus("idle");
+        entity.setSummarizedUserMessageCount(Math.max(session.summarizedUserMessageCount(), summarizedUserMessageCount));
+        entity.setSummaryJobTargetUserMessageCount(0);
+        sessionMapper.updateById(entity);
+        log.info("会话总结任务已完成 sessionId={} summarizedUserMessageCount={}", sessionId, entity.getSummarizedUserMessageCount());
+    }
+
+    public void markSummaryJobFailed(String sessionId) {
+        ConversationSession session = getSession(sessionId);
+        ConversationSessionEntity entity = copySession(session);
+        entity.setSummaryJobStatus("idle");
+        entity.setSummaryJobTargetUserMessageCount(0);
+        sessionMapper.updateById(entity);
+        log.info("会话总结任务已重置为 idle sessionId={}", sessionId);
     }
 
     public List<ConversationMessage> getMessages(String sessionId) {
@@ -156,7 +196,11 @@ public class ConversationSessionStore {
                 entity.getUserId(),
                 entity.getStatus(),
                 entity.getStartedAt(),
-                entity.getEndedAt()
+                entity.getEndedAt(),
+                entity.getUserMessageCount() == null ? 0 : entity.getUserMessageCount(),
+                entity.getSummarizedUserMessageCount() == null ? 0 : entity.getSummarizedUserMessageCount(),
+                entity.getSummaryJobStatus() == null || entity.getSummaryJobStatus().isBlank() ? "idle" : entity.getSummaryJobStatus(),
+                entity.getSummaryJobTargetUserMessageCount() == null ? 0 : entity.getSummaryJobTargetUserMessageCount()
         );
     }
 
@@ -169,5 +213,26 @@ public class ConversationSessionStore {
                 entity.getText(),
                 entity.getCreatedAt()
         );
+    }
+
+    private void incrementUserMessageCount(String sessionId) {
+        ConversationSession session = getSession(sessionId);
+        ConversationSessionEntity entity = copySession(session);
+        entity.setUserMessageCount(session.userMessageCount() + 1);
+        sessionMapper.updateById(entity);
+    }
+
+    private ConversationSessionEntity copySession(ConversationSession session) {
+        ConversationSessionEntity entity = new ConversationSessionEntity();
+        entity.setId(session.id());
+        entity.setUserId(session.userId());
+        entity.setStatus(session.status());
+        entity.setStartedAt(session.startedAt());
+        entity.setEndedAt(session.endedAt());
+        entity.setUserMessageCount(session.userMessageCount());
+        entity.setSummarizedUserMessageCount(session.summarizedUserMessageCount());
+        entity.setSummaryJobStatus(session.summaryJobStatus());
+        entity.setSummaryJobTargetUserMessageCount(session.summaryJobTargetUserMessageCount());
+        return entity;
     }
 }

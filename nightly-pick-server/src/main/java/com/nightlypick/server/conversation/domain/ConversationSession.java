@@ -7,6 +7,10 @@ public record ConversationSession(
         String userId,
         String status,
         OffsetDateTime startedAt,
-        OffsetDateTime endedAt
+        OffsetDateTime endedAt,
+        int userMessageCount,
+        int summarizedUserMessageCount,
+        String summaryJobStatus,
+        int summaryJobTargetUserMessageCount
 ) {
 }

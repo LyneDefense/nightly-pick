@@ -1,8 +1,8 @@
 package com.nightlypick.server.conversation.api;
 
-public record CreateConversationResponse(
+public record RequestSummaryResponse(
         String sessionId,
-        String status,
+        String notice,
         ConversationSummaryStatusResponse summaryStatus
 ) {
 }

@@ -21,6 +21,12 @@ export const appState = Vue.observable({
     userHasSpoken: false,
     lastAutoSavedMessageCount: 0,
   },
+  conversationSummary: {
+    status: "noRecordYet",
+    recordId: "",
+    userMessageCount: 0,
+    summarizedUserMessageCount: 0,
+  },
   chatState: {
     inputValue: "",
     messages: createInitialMessages(),
@@ -74,6 +80,15 @@ export function resetConversationDraft() {
   }
 }
 
+export function setConversationSummary(summaryStatus) {
+  appState.conversationSummary = {
+    status: summaryStatus && summaryStatus.status ? summaryStatus.status : "noRecordYet",
+    recordId: summaryStatus && summaryStatus.recordId ? summaryStatus.recordId : "",
+    userMessageCount: summaryStatus && typeof summaryStatus.userMessageCount === "number" ? summaryStatus.userMessageCount : 0,
+    summarizedUserMessageCount: summaryStatus && typeof summaryStatus.summarizedUserMessageCount === "number" ? summaryStatus.summarizedUserMessageCount : 0,
+  }
+}
+
 export function updateConversationDraft(patch = {}) {
   appState.conversationDraft = {
     ...appState.conversationDraft,
@@ -111,11 +126,12 @@ export function resetChatState() {
   }
 }
 
-export function hydrateConversation(session, messages = []) {
+export function hydrateConversation(session, messages = [], summaryStatus = null) {
   setActiveSessionId(session && session.id)
   setActiveSessionStatus(session && session.status)
   setActiveSessionStartedAt(session && session.startedAt)
   setChatMessages(messages)
+  setConversationSummary(summaryStatus)
   const normalizedMessages = Array.isArray(messages) ? messages : []
   updateConversationDraft({
     userHasSpoken: normalizedMessages.some((message) => message.role === "user" && message.text),
@@ -128,5 +144,6 @@ export function clearActiveConversation() {
   setActiveSessionStatus("")
   setActiveSessionStartedAt("")
   resetConversationDraft()
+  setConversationSummary(null)
   resetChatState()
 }

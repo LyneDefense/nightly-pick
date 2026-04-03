@@ -1,19 +1,26 @@
 package com.nightlypick.server.conversation.application;
 
 import com.nightlypick.server.conversation.application.service.ConversationReplyService;
+import com.nightlypick.server.conversation.application.service.ConversationSummaryAsyncService;
 import com.nightlypick.server.conversation.application.service.RecordGenerationService;
 import com.nightlypick.server.conversation.application.store.ConversationSessionStore;
 import com.nightlypick.server.conversation.api.AutosaveConversationResponse;
 import com.nightlypick.server.conversation.api.CompleteConversationResponse;
+import com.nightlypick.server.conversation.api.ConversationSummaryStatusResponse;
 import com.nightlypick.server.conversation.api.CreateConversationResponse;
+import com.nightlypick.server.conversation.api.RequestSummaryResponse;
 import com.nightlypick.server.conversation.api.SendMessageRequest;
 import com.nightlypick.server.conversation.api.SendMessageResponse;
 import com.nightlypick.server.conversation.domain.ConversationSession;
+import com.nightlypick.server.conversation.domain.ConversationSummaryStatus;
+import com.nightlypick.server.conversation.application.store.DailyRecordStore;
+import com.nightlypick.server.record.domain.DailyRecord;
 import com.nightlypick.server.user.application.UserContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 @Service
@@ -22,17 +29,23 @@ public class ConversationFlowService {
     private final ConversationSessionStore conversationSessionStore;
     private final ConversationReplyService conversationReplyService;
     private final RecordGenerationService recordGenerationService;
+    private final ConversationSummaryAsyncService conversationSummaryAsyncService;
+    private final DailyRecordStore dailyRecordStore;
     private final UserContext userContext;
 
     public ConversationFlowService(
             ConversationSessionStore conversationSessionStore,
             ConversationReplyService conversationReplyService,
             RecordGenerationService recordGenerationService,
+            ConversationSummaryAsyncService conversationSummaryAsyncService,
+            DailyRecordStore dailyRecordStore,
             UserContext userContext
     ) {
         this.conversationSessionStore = conversationSessionStore;
         this.conversationReplyService = conversationReplyService;
         this.recordGenerationService = recordGenerationService;
+        this.conversationSummaryAsyncService = conversationSummaryAsyncService;
+        this.dailyRecordStore = dailyRecordStore;
         this.userContext = userContext;
     }
 
@@ -45,11 +58,39 @@ public class ConversationFlowService {
         } else {
             log.info("已复用当前活跃会话 sessionId={} status={}", session.id(), session.status());
         }
-        return new CreateConversationResponse(session.id(), session.status());
+        return new CreateConversationResponse(session.id(), session.status(), toApiStatus(resolveSummaryStatus(session), session));
     }
 
     public SendMessageResponse sendMessage(String sessionId, SendMessageRequest request) {
-        return conversationReplyService.sendMessage(sessionId, request);
+        SendMessageResponse response = conversationReplyService.sendMessage(sessionId, request);
+        ConversationSession session = conversationSessionStore.getSession(sessionId);
+        return new SendMessageResponse(
+                response.sessionId(),
+                response.userMessage(),
+                response.assistantReply(),
+                response.assistantAudioUrl(),
+                response.shouldEnd(),
+                response.stage(),
+                toApiStatus(resolveSummaryStatus(session), session)
+        );
+    }
+
+    public RequestSummaryResponse requestSummary(String sessionId) {
+        ConversationSession session = conversationSessionStore.getSession(sessionId);
+        ConversationSummaryStatus summaryStatus = resolveSummaryStatus(session);
+        if ("recordGenerating".equals(summaryStatus.status())) {
+            return new RequestSummaryResponse(sessionId, "正在整理刚才的内容", toApiStatus(summaryStatus, session));
+        }
+        if (session.userMessageCount() <= session.summarizedUserMessageCount()) {
+            return new RequestSummaryResponse(sessionId, "当前没有需要整理的新内容", toApiStatus(summaryStatus, session));
+        }
+        ConversationSession runningSession = conversationSessionStore.markSummaryJobRunning(sessionId);
+        conversationSummaryAsyncService.generateSummary(sessionId, runningSession.summaryJobTargetUserMessageCount());
+        return new RequestSummaryResponse(
+                sessionId,
+                "正在整理刚才的内容",
+                toApiStatus(resolveSummaryStatus(runningSession), runningSession)
+        );
     }
 
     public CompleteConversationResponse completeConversation(String sessionId) {
@@ -82,7 +123,8 @@ public class ConversationFlowService {
         ConversationSession session = conversationSessionStore.getSession(sessionId);
         return Map.of(
                 "session", session,
-                "messages", conversationSessionStore.getMessages(sessionId)
+                "messages", conversationSessionStore.getMessages(sessionId),
+                "summaryStatus", toApiStatus(resolveSummaryStatus(session), session)
         );
     }
 
@@ -96,7 +138,36 @@ public class ConversationFlowService {
         log.info("查询到活跃会话 sessionId={} status={}", session.id(), session.status());
         return Map.of(
                 "session", session,
-                "messages", conversationSessionStore.getMessages(session.id())
+                "messages", conversationSessionStore.getMessages(session.id()),
+                "summaryStatus", toApiStatus(resolveSummaryStatus(session), session)
+        );
+    }
+
+    private ConversationSummaryStatus resolveSummaryStatus(ConversationSession session) {
+        LocalDate today = recordGenerationService.currentBusinessDate();
+        DailyRecord todayRecord = dailyRecordStore.findRecordByUserAndDate(userContext.getCurrentUserId(), today);
+        if ("running".equalsIgnoreCase(session.summaryJobStatus())) {
+            return new ConversationSummaryStatus("recordGenerating", todayRecord == null ? null : todayRecord.id());
+        }
+        if (todayRecord == null) {
+            return new ConversationSummaryStatus("noRecordYet", null);
+        }
+        if (session.userMessageCount() > session.summarizedUserMessageCount()) {
+            return new ConversationSummaryStatus("recordNeedsRefresh", todayRecord.id());
+        }
+        return new ConversationSummaryStatus("recordUpToDate", todayRecord.id());
+    }
+
+    private ConversationSummaryStatusResponse toApiStatus(ConversationSummaryStatus status) {
+        return toApiStatus(status, null);
+    }
+
+    private ConversationSummaryStatusResponse toApiStatus(ConversationSummaryStatus status, ConversationSession session) {
+        return new ConversationSummaryStatusResponse(
+                status.status(),
+                status.recordId(),
+                session == null ? 0 : session.userMessageCount(),
+                session == null ? 0 : session.summarizedUserMessageCount()
         );
     }
 }

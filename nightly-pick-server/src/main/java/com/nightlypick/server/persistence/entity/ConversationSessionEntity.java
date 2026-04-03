@@ -13,6 +13,10 @@ public class ConversationSessionEntity {
     private String status;
     private OffsetDateTime startedAt;
     private OffsetDateTime endedAt;
+    private Integer userMessageCount;
+    private Integer summarizedUserMessageCount;
+    private String summaryJobStatus;
+    private Integer summaryJobTargetUserMessageCount;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -24,4 +28,12 @@ public class ConversationSessionEntity {
     public void setStartedAt(OffsetDateTime startedAt) { this.startedAt = startedAt; }
     public OffsetDateTime getEndedAt() { return endedAt; }
     public void setEndedAt(OffsetDateTime endedAt) { this.endedAt = endedAt; }
+    public Integer getUserMessageCount() { return userMessageCount; }
+    public void setUserMessageCount(Integer userMessageCount) { this.userMessageCount = userMessageCount; }
+    public Integer getSummarizedUserMessageCount() { return summarizedUserMessageCount; }
+    public void setSummarizedUserMessageCount(Integer summarizedUserMessageCount) { this.summarizedUserMessageCount = summarizedUserMessageCount; }
+    public String getSummaryJobStatus() { return summaryJobStatus; }
+    public void setSummaryJobStatus(String summaryJobStatus) { this.summaryJobStatus = summaryJobStatus; }
+    public Integer getSummaryJobTargetUserMessageCount() { return summaryJobTargetUserMessageCount; }
+    public void setSummaryJobTargetUserMessageCount(Integer summaryJobTargetUserMessageCount) { this.summaryJobTargetUserMessageCount = summaryJobTargetUserMessageCount; }
 }
