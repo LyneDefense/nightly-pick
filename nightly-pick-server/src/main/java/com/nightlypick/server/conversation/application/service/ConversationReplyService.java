@@ -22,7 +22,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -136,25 +135,13 @@ public class ConversationReplyService {
             return List.of();
         }
         List<ConversationMessage> previousUnansweredMessages = unmatchedUserMessages.subList(0, unmatchedUserMessages.size() - 1);
-        return previousUnansweredMessages.stream()
+        int fromIndex = Math.max(0, previousUnansweredMessages.size() - 10);
+        return previousUnansweredMessages.subList(fromIndex, previousUnansweredMessages.size()).stream()
                 .filter(message -> message.text() != null && !message.text().isBlank())
-                .sorted(Comparator
-                        .comparingInt((ConversationMessage message) -> scorePendingInput(message.text()))
-                        .thenComparing(ConversationMessage::createdAt, Comparator.nullsLast(Comparator.naturalOrder()))
-                        .reversed())
-                .limit(2)
                 .map(ConversationMessage::text)
+                .map(String::trim)
+                .filter(text -> !text.isBlank())
+                .distinct()
                 .toList();
-    }
-
-    private int scorePendingInput(String text) {
-        String normalized = text == null ? "" : text.trim();
-        if (normalized.isBlank()) return 0;
-        int score = Math.min(normalized.length(), 80);
-        if (normalized.length() >= 12) score += 20;
-        if (normalized.contains("今天") || normalized.contains("刚刚") || normalized.contains("明天")) score += 15;
-        if (normalized.contains("有点") || normalized.contains("难受") || normalized.contains("烦") || normalized.contains("想")) score += 15;
-        if (normalized.length() <= 3) score -= 25;
-        return score;
     }
 }

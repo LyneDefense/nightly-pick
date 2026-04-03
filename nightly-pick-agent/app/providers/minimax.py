@@ -105,8 +105,8 @@ reflection_readiness: not_ready|light_ready|ready
             messages.append(
                 {
                     "role": "system",
-                    "content": "下面这些是用户前面说过、但你还没明确接住的内容。请只自然补上其中最重要的 1 到 2 个点，并和这次新的输入融合成一条回复，不要逐条罗列，不要说自己漏回了：\n"
-                    + "\n".join(f"- {item}" for item in request.pending_unanswered_inputs[:2]),
+                    "content": "下面这些是用户前面说过、但你还没明确接住的候选内容。请你自己判断其中哪 1 到 2 个点最值得这次自然补上；如果候选都不重要，也可以不补。回复时要把选中的旧点和这次新的输入融合成一条自然回复，不要逐条罗列，不要说自己漏回了：\n"
+                    + "\n".join(f"- {item}" for item in request.pending_unanswered_inputs[:10]),
                 }
             )
         for item in request.history[-6:]:
