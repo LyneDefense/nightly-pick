@@ -156,6 +156,7 @@ export default {
       summaryActionLoading: false,
       summaryActionTriggered: false,
       shareCardPromptVisible: false,
+      shareCardGenerating: false,
       failedSendState: null,
       lastReplySignals: {
         dominantMode: "companionship",
@@ -287,13 +288,13 @@ export default {
       return "把刚才说到的，整理成今晚的一页。"
     },
     inlineCardButtonLabel() {
-      if (this.shouldShowShareCardPrompt) return "生成卡片"
+      if (this.shouldShowShareCardPrompt) return this.shareCardGenerating ? "生成中..." : "生成卡片"
       if (this.conversationSummary.status === "recordGenerating") return ""
       if (this.conversationSummary.status === "recordNeedsRefresh") return "更新一下"
       return "整理今晚"
     },
     inlineCardLoading() {
-      return this.shouldShowShareCardPrompt ? false : this.summaryActionLoading
+      return this.shouldShowShareCardPrompt ? this.shareCardGenerating : this.summaryActionLoading
     },
     failedSendTitle() {
       if (!this.failedSendState) return ""
@@ -838,10 +839,13 @@ export default {
     },
     async handleGenerateCard() {
       const record = this.latestTodayRecord
-      if (!record) {
-        showError("这一页还没准备好")
+      if (!record || this.shareCardGenerating) {
+        if (!record) {
+          showError("这一页还没准备好")
+        }
         return
       }
+      this.shareCardGenerating = true
       try {
         const generatedCopy = await generateShareCard(record.id, "today")
         const draft = buildShareCardDraft(record, "today", generatedCopy)
@@ -854,6 +858,8 @@ export default {
         uni.navigateTo({ url: "/pages/share-card-result/index?from=chat" })
       } catch (error) {
         showError(error && error.message ? error.message : "卡片文案生成失败")
+      } finally {
+        this.shareCardGenerating = false
       }
     },
     async goBack() {

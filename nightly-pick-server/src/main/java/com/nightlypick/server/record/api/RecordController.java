@@ -5,7 +5,9 @@ import com.nightlypick.server.agent.dto.AgentGenerateShareCardResponse;
 import com.nightlypick.server.agent.service.AgentClient;
 import com.nightlypick.server.common.api.ApiResponse;
 import com.nightlypick.server.conversation.application.store.DailyRecordStore;
+import com.nightlypick.server.record.application.ShareCardRateLimitService;
 import com.nightlypick.server.record.domain.DailyRecord;
+import com.nightlypick.server.user.application.UserContext;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -23,10 +25,19 @@ public class RecordController {
 
     private final DailyRecordStore dailyRecordStore;
     private final AgentClient agentClient;
+    private final UserContext userContext;
+    private final ShareCardRateLimitService shareCardRateLimitService;
 
-    public RecordController(DailyRecordStore dailyRecordStore, AgentClient agentClient) {
+    public RecordController(
+            DailyRecordStore dailyRecordStore,
+            AgentClient agentClient,
+            UserContext userContext,
+            ShareCardRateLimitService shareCardRateLimitService
+    ) {
         this.dailyRecordStore = dailyRecordStore;
         this.agentClient = agentClient;
+        this.userContext = userContext;
+        this.shareCardRateLimitService = shareCardRateLimitService;
     }
 
     @GetMapping
@@ -45,6 +56,7 @@ public class RecordController {
             @RequestBody GenerateShareCardRequest request
     ) {
         DailyRecord record = dailyRecordStore.getRecord(recordId);
+        shareCardRateLimitService.checkAndMark(userContext.getCurrentUserId(), record.id());
         String cardType = request == null || request.cardType() == null || request.cardType().isBlank()
                 ? "today"
                 : request.cardType();

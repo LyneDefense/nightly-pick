@@ -50,9 +50,9 @@
         <text class="action-icon">✎</text>
         <text class="action-text">编辑</text>
       </button>
-      <button class="action-item" @click="handleGenerateCard">
+      <button class="action-item" :disabled="shareCardGenerating" @click="handleGenerateCard">
         <text class="action-icon">↗</text>
-        <text class="action-text">{{ cardActionText }}</text>
+        <text class="action-text">{{ shareCardGenerating ? "生成中..." : cardActionText }}</text>
       </button>
       <button class="action-item" @click="handleDelete">
         <text class="action-icon">⌦</text>
@@ -81,6 +81,7 @@ export default {
       routeSource: "history",
       editableSummary: "",
       showAllOpenLoops: false,
+      shareCardGenerating: false,
       shareCardVersion: 0,
       state: appState,
     }
@@ -208,7 +209,8 @@ export default {
       this.showAllOpenLoops = !this.showAllOpenLoops
     },
     async handleGenerateCard() {
-      if (!this.record) return
+      if (!this.record || this.shareCardGenerating) return
+      this.shareCardGenerating = true
       try {
         const generatedCopy = await generateShareCard(this.record.id, this.shareCardType)
         const draft = buildShareCardDraft(this.record, this.shareCardType, generatedCopy)
@@ -220,6 +222,8 @@ export default {
         uni.navigateTo({ url: "/pages/share-card-result/index?from=detail" })
       } catch (error) {
         showError(error && error.message ? error.message : "卡片文案生成失败")
+      } finally {
+        this.shareCardGenerating = false
       }
     },
   },
