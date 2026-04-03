@@ -119,6 +119,21 @@ export function appendChatMessage(message) {
   }
 }
 
+export function removeLastChatMessage(predicate) {
+  const nextMessages = [...appState.chatState.messages]
+  for (let index = nextMessages.length - 1; index >= 0; index -= 1) {
+    const message = nextMessages[index]
+    if (!predicate || predicate(message, index)) {
+      nextMessages.splice(index, 1)
+      appState.chatState = {
+        ...appState.chatState,
+        messages: nextMessages.length ? nextMessages : createInitialMessages(),
+      }
+      return
+    }
+  }
+}
+
 export function resetChatState() {
   appState.chatState = {
     inputValue: "",

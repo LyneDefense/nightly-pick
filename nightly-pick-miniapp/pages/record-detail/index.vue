@@ -50,9 +50,9 @@
         <text class="action-icon">✎</text>
         <text class="action-text">编辑</text>
       </button>
-      <button class="action-item">
+      <button class="action-item" @click="handleGenerateCard">
         <text class="action-icon">↗</text>
-        <text class="action-text">分享</text>
+        <text class="action-text">{{ cardActionText }}</text>
       </button>
       <button class="action-item" @click="handleDelete">
         <text class="action-icon">⌦</text>
@@ -65,6 +65,7 @@
 <script>
 import { deleteRecord, getRecord, updateRecord } from "../../services/records"
 import { appState, removeRecord, upsertRecord } from "../../stores/app-state"
+import { buildTodayShareCardDraft, cacheShareCardDraft, hasGeneratedTodayCard } from "../../utils/share-card"
 import { showError, showSuccess } from "../../utils/ui"
 
 export default {
@@ -75,6 +76,7 @@ export default {
       routeSource: "history",
       editableSummary: "",
       showAllOpenLoops: false,
+      shareCardVersion: 0,
       state: appState,
     }
   },
@@ -112,8 +114,16 @@ export default {
       const [year, month, day] = String(this.record.date).split("-")
       return `${month}月${day}日 22:30`
     },
+    hasTodayCard() {
+      void this.shareCardVersion
+      return this.record && this.record.date ? hasGeneratedTodayCard(this.record.date) : false
+    },
+    cardActionText() {
+      return this.hasTodayCard ? "重新生成" : "生成卡片"
+    },
   },
   onShow() {
+    this.shareCardVersion = Date.now()
     const pages = getCurrentPages()
     const currentPage = pages[pages.length - 1]
     const options = currentPage && currentPage.options ? currentPage.options : {}
@@ -178,6 +188,16 @@ export default {
     },
     toggleOpenLoops() {
       this.showAllOpenLoops = !this.showAllOpenLoops
+    },
+    handleGenerateCard() {
+      if (!this.record) return
+      const draft = buildTodayShareCardDraft(this.record)
+      if (!draft) {
+        showError("这页还不足以生成卡片")
+        return
+      }
+      cacheShareCardDraft(draft)
+      uni.navigateTo({ url: "/pages/share-card-result/index?from=detail" })
     },
   },
 }

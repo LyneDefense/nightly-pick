@@ -40,6 +40,13 @@
         "navigationStyle": "custom",
         "backgroundColorTop": "#f2ece0"
       }
+    },
+    {
+      "path": "pages/share-card-result/index",
+      "style": {
+        "navigationStyle": "custom",
+        "backgroundColorTop": "#f2ece0"
+      }
     }
   ]
 }

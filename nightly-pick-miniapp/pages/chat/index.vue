@@ -34,18 +34,18 @@
       </view>
     </scroll-view>
 
-    <view v-if="shouldShowSummaryCard" class="summary-action-card">
+    <view v-if="shouldShowInlineCard" class="summary-action-card">
       <view class="summary-action-copy">
-        <text class="summary-action-title">{{ summaryCardTitle }}</text>
-        <text class="summary-action-desc">{{ summaryCardDescription }}</text>
+        <text class="summary-action-title">{{ inlineCardTitle }}</text>
+        <text class="summary-action-desc">{{ inlineCardDescription }}</text>
       </view>
       <button
-        v-if="summaryCardButtonLabel"
+        v-if="inlineCardButtonLabel"
         class="summary-action-button"
-        :disabled="summaryActionLoading"
-        @click="handleSummaryAction"
+        :disabled="inlineCardLoading"
+        @click="handleInlineCardAction"
       >
-        {{ summaryCardButtonLabel }}
+        {{ inlineCardButtonLabel }}
       </button>
       <view v-else class="summary-action-loading">
         <view class="summary-loading-dot"></view>
@@ -116,6 +116,7 @@ import { createConversation, getActiveConversation, getConversation, requestConv
 import { transcribeAudio, uploadAudio } from "../../services/audio"
 import { getRecords } from "../../services/records"
 import { getSettings } from "../../services/settings"
+import { buildTodayShareCardDraft, cacheShareCardDraft, hasGeneratedTodayCard } from "../../utils/share-card"
 import {
   appState,
   appendChatMessage,
@@ -154,6 +155,7 @@ export default {
       inputMode: "voice",
       summaryActionLoading: false,
       summaryActionTriggered: false,
+      shareCardPromptVisible: false,
       failedSendState: null,
       lastReplySignals: {
         dominantMode: "companionship",
@@ -234,13 +236,36 @@ export default {
     hasMeaningfulUnsummarizedContent() {
       return this.unsummarizedUserMessages.length >= 2 || this.unsummarizedCharCount >= 12
     },
+    latestTodayRecord() {
+      const records = Array.isArray(this.state.records) ? this.state.records : []
+      if (!records.length) return null
+      if (this.conversationSummary.recordId) {
+        const matched = records.find((item) => item.id === this.conversationSummary.recordId)
+        if (matched) return matched
+      }
+      return records[0] || null
+    },
+    shouldShowShareCardPrompt() {
+      return (
+        this.shareCardPromptVisible &&
+        this.conversationSummary.status === "recordUpToDate" &&
+        this.latestTodayRecord &&
+        !hasGeneratedTodayCard(this.latestTodayRecord.date)
+      )
+    },
     shouldShowSummaryCard() {
       if (this.conversationSummary.status === "recordGenerating") return true
       if (this.conversationSummary.status === "recordNeedsRefresh") return this.hasMeaningfulUnsummarizedContent
       if (this.conversationSummary.status === "noRecordYet") return this.hasRecoverableContent()
       return false
     },
-    summaryCardTitle() {
+    shouldShowInlineCard() {
+      return this.shouldShowSummaryCard || this.shouldShowShareCardPrompt
+    },
+    inlineCardTitle() {
+      if (this.shouldShowShareCardPrompt) {
+        return "这一页，也可以留成一张卡片"
+      }
       if (this.conversationSummary.status === "recordGenerating") {
         return "正在整理刚才的内容"
       }
@@ -249,7 +274,10 @@ export default {
       }
       return "把今晚收一下"
     },
-    summaryCardDescription() {
+    inlineCardDescription() {
+      if (this.shouldShowShareCardPrompt) {
+        return "留给自己，或者等以后想起时再看一眼。"
+      }
       if (this.conversationSummary.status === "recordGenerating") {
         return "你可以继续聊，整理好了会自动更新。"
       }
@@ -258,10 +286,14 @@ export default {
       }
       return "把刚才说到的，整理成今晚的一页。"
     },
-    summaryCardButtonLabel() {
+    inlineCardButtonLabel() {
+      if (this.shouldShowShareCardPrompt) return "生成卡片"
       if (this.conversationSummary.status === "recordGenerating") return ""
       if (this.conversationSummary.status === "recordNeedsRefresh") return "更新一下"
       return "整理今晚"
+    },
+    inlineCardLoading() {
+      return this.shouldShowShareCardPrompt ? false : this.summaryActionLoading
     },
     failedSendTitle() {
       if (!this.failedSendState) return ""
@@ -409,6 +441,7 @@ export default {
       this.loading = true
       const text = draftText.trim()
       const inputType = inputTypeOverride || this.inputMode
+      this.shareCardPromptVisible = false
       this.failedSendState = null
       this.userHasSpoken = true
       appendChatMessage({ role: "user", text, inputType, timeLabel: this.currentTimeLabel() })
@@ -573,7 +606,15 @@ export default {
     async handleSummaryAction() {
       if (this.summaryActionLoading || !this.sessionId) return
       this.clearAutoSummaryTimer()
+      this.shareCardPromptVisible = false
       await this.requestSummary({ userInitiated: true })
+    },
+    handleInlineCardAction() {
+      if (this.shouldShowShareCardPrompt) {
+        this.handleGenerateCard()
+        return
+      }
+      this.handleSummaryAction()
     },
     ensureRecordPermission() {
       return new Promise((resolve) => {
@@ -728,6 +769,7 @@ export default {
       if (!this.sessionId || this.summaryActionLoading) return
       this.summaryActionLoading = true
       this.summaryActionTriggered = userInitiated
+      this.shareCardPromptVisible = false
       try {
         const response = await requestConversationSummary(this.sessionId)
         setConversationSummary(response.summaryStatus)
@@ -757,10 +799,11 @@ export default {
           )
           if (response.summaryStatus && response.summaryStatus.status !== "recordGenerating") {
             this.clearSummaryPollTimer()
-            await this.refreshRecords()
+            const records = await this.refreshRecords()
             if ((this.summaryActionTriggered || userInitiated) && response.summaryStatus.status === "recordUpToDate") {
               showSuccess("已更新今晚整理")
             }
+            this.maybeShowShareCardPrompt(records)
             this.summaryActionTriggered = false
           }
         } catch (error) {
@@ -774,10 +817,39 @@ export default {
     },
     async refreshRecords() {
       try {
-        setRecords(await getRecords())
+        const records = await getRecords()
+        setRecords(records)
+        return records
       } catch (error) {
         console.error("[nightly-pick][records] refresh failed", error)
+        return []
       }
+    },
+    maybeShowShareCardPrompt(records = []) {
+      const normalizedRecords = Array.isArray(records) && records.length ? records : this.state.records
+      const targetRecord = this.conversationSummary.recordId
+        ? normalizedRecords.find((item) => item.id === this.conversationSummary.recordId)
+        : normalizedRecords[0]
+      if (!targetRecord || !targetRecord.date || hasGeneratedTodayCard(targetRecord.date)) {
+        this.shareCardPromptVisible = false
+        return
+      }
+      this.shareCardPromptVisible = true
+    },
+    handleGenerateCard() {
+      const record = this.latestTodayRecord
+      if (!record) {
+        showError("这一页还没准备好")
+        return
+      }
+      const draft = buildTodayShareCardDraft(record)
+      if (!draft) {
+        showError("这一页还不足以生成卡片")
+        return
+      }
+      cacheShareCardDraft(draft)
+      this.shareCardPromptVisible = false
+      uni.navigateTo({ url: "/pages/share-card-result/index?from=chat" })
     },
     async goBack() {
       this.stopRecording({ force: true })
