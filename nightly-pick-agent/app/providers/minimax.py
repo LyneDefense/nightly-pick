@@ -468,11 +468,55 @@ subline: string
         if response.status_code >= 400:
             raise HTTPException(status_code=502, detail=f"MiniMax text error: {response.text}")
         body = response.json()
-        try:
-            content = body["choices"][0]["message"]["content"]
+        content = self._extract_documented_text_content(body)
+        if content is not None:
             return self._sanitize_text(content)
-        except (KeyError, IndexError, TypeError) as exc:
-            raise HTTPException(status_code=502, detail="MiniMax text response format is invalid.") from exc
+        logger.error("MiniMax 文本模型返回了无法识别的响应格式 body=%s", json.dumps(body, ensure_ascii=False))
+        raise HTTPException(status_code=502, detail="MiniMax text response format is invalid.")
+
+    @staticmethod
+    def _extract_documented_text_content(body: object) -> str | None:
+        if not isinstance(body, dict):
+            return None
+
+        choices = body.get("choices")
+        if isinstance(choices, list) and choices:
+            first_choice = choices[0]
+            if isinstance(first_choice, dict):
+                message = first_choice.get("message")
+                if isinstance(message, dict):
+                    # Official MiniMax REST docs expose the user-visible reply here.
+                    # reasoning_content is a separate field and must never be surfaced.
+                    content = MiniMaxTextProvider._coerce_message_content(message.get("content"))
+                    if content:
+                        return content
+
+                # Narrow compatibility fallback: if upstream returns a flattened text field
+                # alongside the documented envelope, still accept it.
+                text = MiniMaxTextProvider._coerce_message_content(first_choice.get("text"))
+                if text:
+                    return text
+        return None
+
+    @staticmethod
+    def _coerce_message_content(content: object) -> str | None:
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            text_parts: list[str] = []
+            for item in content:
+                if isinstance(item, str):
+                    text_parts.append(item)
+                    continue
+                if isinstance(item, dict):
+                    for key in ("text", "content"):
+                        value = item.get(key)
+                        if isinstance(value, str) and value.strip():
+                            text_parts.append(value)
+                            break
+            merged = "".join(text_parts).strip()
+            return merged or None
+        return None
 
     @staticmethod
     def _parse_json(content: str) -> dict:
