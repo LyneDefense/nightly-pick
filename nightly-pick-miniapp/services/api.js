@@ -43,7 +43,10 @@ export function request(options) {
         })
         if (response.statusCode && response.statusCode >= 400) {
           const errorMessage = data.message || data.error || "请求失败"
-          reject(new Error(errorMessage))
+          const error = new Error(errorMessage)
+          error.statusCode = response.statusCode
+          error.responseData = data
+          reject(error)
           return
         }
         resolve(data.data)

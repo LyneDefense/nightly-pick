@@ -6,6 +6,7 @@ public record AgentChatReplyRequest(
         String sessionId,
         String userInput,
         List<String> history,
+        List<String> pendingUnansweredInputs,
         String profileSummary,
         String emotionalTrendSummary,
         String strategyHints,

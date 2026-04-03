@@ -22,6 +22,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -66,6 +67,7 @@ public class ConversationReplyService {
         String emotionalTrendSummary = allowMemoryReference ? memoryStore.buildEmotionalTrendSummary(userId) : null;
         String strategyHints = allowMemoryReference ? memoryStore.buildConversationStrategyHints(userId, request.text()) : null;
         List<String> relevantMemories = allowMemoryReference ? memoryStore.listRelevantMemoryContents(userId, request.text(), 3) : List.of();
+        List<String> pendingUnansweredInputs = selectPendingUnansweredInputs(history);
         log.info("已整理对话上下文 sessionId={} historyCount={} allowMemoryReference={} relevantMemoryCount={}",
                 sessionId,
                 history.size(),
@@ -75,6 +77,7 @@ public class ConversationReplyService {
                 sessionId,
                 request.text(),
                 history.stream().map(message -> message.role() + ": " + message.text()).toList(),
+                pendingUnansweredInputs,
                 profileSummary,
                 emotionalTrendSummary,
                 strategyHints,
@@ -115,5 +118,43 @@ public class ConversationReplyService {
                 reply.reflectionReadiness(),
                 new ConversationSummaryStatusResponse(summaryStatus, todayRecord == null ? null : todayRecord.id(), 0, 0)
         );
+    }
+
+    private List<String> selectPendingUnansweredInputs(List<ConversationMessage> history) {
+        if (history == null || history.isEmpty()) return List.of();
+        int trailingAssistantIndex = -1;
+        for (int index = history.size() - 1; index >= 0; index -= 1) {
+            if ("assistant".equals(history.get(index).role())) {
+                trailingAssistantIndex = index;
+                break;
+            }
+        }
+        List<ConversationMessage> unmatchedUserMessages = history.subList(trailingAssistantIndex + 1, history.size()).stream()
+                .filter(message -> "user".equals(message.role()))
+                .toList();
+        if (unmatchedUserMessages.size() <= 1) {
+            return List.of();
+        }
+        List<ConversationMessage> previousUnansweredMessages = unmatchedUserMessages.subList(0, unmatchedUserMessages.size() - 1);
+        return previousUnansweredMessages.stream()
+                .filter(message -> message.text() != null && !message.text().isBlank())
+                .sorted(Comparator
+                        .comparingInt((ConversationMessage message) -> scorePendingInput(message.text()))
+                        .thenComparing(ConversationMessage::createdAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .reversed())
+                .limit(2)
+                .map(ConversationMessage::text)
+                .toList();
+    }
+
+    private int scorePendingInput(String text) {
+        String normalized = text == null ? "" : text.trim();
+        if (normalized.isBlank()) return 0;
+        int score = Math.min(normalized.length(), 80);
+        if (normalized.length() >= 12) score += 20;
+        if (normalized.contains("今天") || normalized.contains("刚刚") || normalized.contains("明天")) score += 15;
+        if (normalized.contains("有点") || normalized.contains("难受") || normalized.contains("烦") || normalized.contains("想")) score += 15;
+        if (normalized.length() <= 3) score -= 25;
+        return score;
     }
 }

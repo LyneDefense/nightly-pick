@@ -54,6 +54,14 @@
       </view>
     </view>
 
+    <view v-if="failedSendState" class="send-error-card">
+      <view class="send-error-copy">
+        <text class="send-error-title">{{ failedSendTitle }}</text>
+        <text class="send-error-desc">{{ failedSendDescription }}</text>
+      </view>
+      <button v-if="failedSendState.mode === 'retry'" class="send-error-button" :disabled="loading" @click="retryFailedSend">再试一次</button>
+    </view>
+
     <view v-if="inputMode === 'voice'" class="voice-composer">
       <button class="mode-switch voice-switch" @click="toggleInputMode">
         <view class="keyboard-icon">
@@ -113,6 +121,7 @@ import {
   appendChatMessage,
   clearActiveConversation,
   hydrateConversation,
+  removeLastChatMessage,
   setConversationSummary,
   setActiveSessionId,
   setChatInput,
@@ -145,6 +154,7 @@ export default {
       inputMode: "voice",
       summaryActionLoading: false,
       summaryActionTriggered: false,
+      failedSendState: null,
       lastReplySignals: {
         dominantMode: "companionship",
         reflectionReadiness: "not_ready",
@@ -252,6 +262,20 @@ export default {
       if (this.conversationSummary.status === "recordGenerating") return ""
       if (this.conversationSummary.status === "recordNeedsRefresh") return "更新一下"
       return "整理今晚"
+    },
+    failedSendTitle() {
+      if (!this.failedSendState) return ""
+      if (this.failedSendState.mode === "pending") {
+        return "刚才那句话我还没来得及接住"
+      }
+      return "刚才那句话没有发出去"
+    },
+    failedSendDescription() {
+      if (!this.failedSendState) return ""
+      if (this.failedSendState.mode === "pending") {
+        return "你可以继续说，下一次回复时我会一起接住。"
+      }
+      return this.failedSendState.preview || ""
     },
   },
   onShow() {
@@ -385,6 +409,7 @@ export default {
       this.loading = true
       const text = draftText.trim()
       const inputType = inputTypeOverride || this.inputMode
+      this.failedSendState = null
       this.userHasSpoken = true
       appendChatMessage({ role: "user", text, inputType, timeLabel: this.currentTimeLabel() })
       if (typeof explicitText !== "string") {
@@ -395,7 +420,7 @@ export default {
         const response = await sendMessage(this.sessionId, text, inputType === "voice" ? "voice" : "text")
         appendChatMessage({
           role: "assistant",
-          text: response.assistantReply,
+          text: this.sanitizeAssistantText(response.assistantReply),
           assistantAudioUrl: response.assistantAudioUrl,
           inputType: "text",
           timeLabel: this.currentTimeLabel(),
@@ -418,9 +443,55 @@ export default {
           this.scheduleAutoSummary()
         }
       } catch (error) {
+        await this.handleSendFailure(error, text, inputType)
         showError(error && error.message ? error.message : "发送失败")
       } finally {
         this.loading = false
+      }
+    },
+    async retryFailedSend() {
+      if (!this.failedSendState || this.failedSendState.mode !== "retry" || this.loading) return
+      const failedDraft = this.failedSendState
+      this.failedSendState = null
+      await this.handleSend(failedDraft.inputType, failedDraft.text)
+    },
+    async handleSendFailure(error, text, inputType) {
+      const conversationSynced = await this.reconcileConversationAfterFailure(text)
+      if (conversationSynced) {
+        this.failedSendState = {
+          mode: "pending",
+          text,
+          inputType,
+          preview: text.length > 24 ? `${text.slice(0, 24)}...` : text,
+        }
+        return
+      }
+      removeLastChatMessage((message) => message.role === "user" && message.text === text && message.inputType === inputType)
+      this.failedSendState = {
+        mode: "retry",
+        text,
+        inputType,
+        preview: text.length > 24 ? `${text.slice(0, 24)}...` : text,
+      }
+      if (inputType === "text" && !this.inputValue.trim()) {
+        this.inputValue = text
+      }
+    },
+    async reconcileConversationAfterFailure(sentText) {
+      if (!this.sessionId) return false
+      try {
+        const response = await getConversation(this.sessionId)
+        if (!response || !response.session) return false
+        const normalizedMessages = this.normalizeConversationMessages(response.messages)
+        const hasPersistedUserMessage = normalizedMessages.some(
+          (message) => message.role === "user" && message.text === sentText
+        )
+        hydrateConversation(response.session, normalizedMessages, response.summaryStatus)
+        this.bumpScroll()
+        return hasPersistedUserMessage
+      } catch (syncError) {
+        console.error("[nightly-pick][chat] reconcile after failure failed", syncError)
+        return false
       }
     },
     async startRecording() {
@@ -731,6 +802,10 @@ export default {
       const mm = `${date.getMinutes()}`.padStart(2, "0")
       return `${hh}:${mm}`
     },
+    sanitizeAssistantText(value) {
+      const raw = typeof value === "string" ? value : ""
+      return raw.replace(/<think\b[^>]*>[\s\S]*?(?:<\/think>|$)/gi, "").trim()
+    },
   },
 }
 </script>
@@ -823,6 +898,58 @@ export default {
   display: flex;
   align-items: center;
   gap: 18rpx;
+}
+
+.send-error-card {
+  position: fixed;
+  left: 24rpx;
+  right: 24rpx;
+  bottom: calc(var(--np-safe-bottom) + 318rpx);
+  z-index: 18;
+  padding: 22rpx 24rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 250, 246, 0.98);
+  box-shadow:
+    0 14rpx 32rpx rgba(140, 88, 66, 0.08),
+    inset 0 0 0 1rpx rgba(140, 88, 66, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.send-error-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.send-error-title {
+  display: block;
+  font-size: 26rpx;
+  color: rgba(104, 63, 47, 0.92);
+  font-weight: 600;
+}
+
+.send-error-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
+  color: rgba(104, 63, 47, 0.58);
+}
+
+.send-error-button {
+  min-height: 68rpx;
+  padding: 0 26rpx;
+  border-radius: 999rpx;
+  background: rgba(104, 63, 47, 0.12);
+  color: #684634;
+  font-size: 24rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .summary-action-copy {

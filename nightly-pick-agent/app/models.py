@@ -26,6 +26,7 @@ class ChatReplyRequest(CamelModel):
     session_id: str = Field(..., min_length=1)
     user_input: str = Field(..., min_length=1)
     history: list[str] = Field(default_factory=list)
+    pending_unanswered_inputs: list[str] = Field(default_factory=list)
     profile_summary: str | None = None
     emotional_trend_summary: str | None = None
     strategy_hints: str | None = None

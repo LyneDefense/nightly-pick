@@ -21,6 +21,7 @@ public class ConversationApplicationService {
                 request.sessionId(),
                 request.userInput(),
                 List.of(),
+                List.of(),
                 null,
                 null,
                 null,

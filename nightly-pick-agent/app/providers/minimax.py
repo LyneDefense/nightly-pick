@@ -101,6 +101,14 @@ reflection_readiness: not_ready|light_ready|ready
                     + "\n".join(f"- {item}" for item in request.recent_memories[:3]),
                 }
             )
+        if request.pending_unanswered_inputs:
+            messages.append(
+                {
+                    "role": "system",
+                    "content": "下面这些是用户前面说过、但你还没明确接住的内容。请只自然补上其中最重要的 1 到 2 个点，并和这次新的输入融合成一条回复，不要逐条罗列，不要说自己漏回了：\n"
+                    + "\n".join(f"- {item}" for item in request.pending_unanswered_inputs[:2]),
+                }
+            )
         for item in request.history[-6:]:
             role = "assistant" if item.startswith("assistant:") else "user"
             content = item.split(":", 1)[1].strip() if ":" in item else item
@@ -463,7 +471,7 @@ highlight: string
 
     @staticmethod
     def _sanitize_text(content: str) -> str:
-        sanitized = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
+        sanitized = re.sub(r"<think\b[^>]*>[\s\S]*?(?:</think>|$)", "", content, flags=re.IGNORECASE).strip()
         return sanitized or content.strip()
 
     @staticmethod
