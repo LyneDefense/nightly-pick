@@ -106,7 +106,7 @@ reflection_readiness: not_ready|light_ready|ready
             content = item.split(":", 1)[1].strip() if ":" in item else item
             messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": request.user_input})
-        payload = self._parse_json(await self._chat_completion(messages))
+        payload = self._parse_chat_payload(await self._chat_completion(messages), request)
         reply_text = self._sanitize_text(str(payload.get("reply_text", "") or ""))
         stage = self._normalize_stage(payload.get("stage"), request.history)
         dominant_mode = self._normalize_dominant_mode(payload.get("dominant_mode"))
@@ -127,6 +127,29 @@ reflection_readiness: not_ready|light_ready|ready
             dominant_mode=dominant_mode,
             reflection_readiness=reflection_readiness,
         )
+
+    def _parse_chat_payload(self, content: str, request: ChatReplyRequest) -> dict:
+        try:
+            return self._parse_json(content)
+        except HTTPException:
+            fallback_text = self._sanitize_text(content)
+            fallback_stage = self._normalize_stage(None, request.history)
+            fallback_mode = self._infer_chat_mode(request)
+            fallback_readiness = self._normalize_reflection_readiness(None, fallback_mode, fallback_stage)
+            logger.warning(
+                "聊天模型未返回合法 JSON，已回退为纯文本解析 sessionId=%s mode=%s readiness=%s content=%s",
+                request.session_id,
+                fallback_mode,
+                fallback_readiness,
+                fallback_text,
+            )
+            return {
+                "reply_text": fallback_text,
+                "should_end": False,
+                "stage": fallback_stage,
+                "dominant_mode": fallback_mode,
+                "reflection_readiness": fallback_readiness,
+            }
 
     async def generate_record(self, request: GenerateRecordRequest) -> GenerateRecordResponse:
         plan = await self.plan_reflection(
@@ -438,6 +461,15 @@ highlight: string
         if dominant_mode == "sorting":
             return "light_ready"
         return "not_ready"
+
+    @staticmethod
+    def _infer_chat_mode(request: ChatReplyRequest) -> str:
+        text = " ".join([*request.history[-6:], request.user_input]).lower()
+        if any(keyword in text for keyword in ["今天", "刚刚", "明天", "还没", "想做", "打算", "因为", "有点"]):
+            return "sorting"
+        if len(request.history) >= 6:
+            return "review"
+        return "companionship"
 
 
 class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
