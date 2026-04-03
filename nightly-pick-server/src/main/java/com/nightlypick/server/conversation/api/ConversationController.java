@@ -34,6 +34,11 @@ public class ConversationController {
         return ApiResponse.ok(conversationFlowService.sendMessage(sessionId, request));
     }
 
+    @PostMapping("/{sessionId}/summary")
+    public ApiResponse<RequestSummaryResponse> requestSummary(@PathVariable String sessionId) {
+        return ApiResponse.ok(conversationFlowService.requestSummary(sessionId));
+    }
+
     @PostMapping("/{sessionId}/complete")
     public ApiResponse<CompleteConversationResponse> completeConversation(@PathVariable String sessionId) {
         return ApiResponse.ok(conversationFlowService.completeConversation(sessionId));

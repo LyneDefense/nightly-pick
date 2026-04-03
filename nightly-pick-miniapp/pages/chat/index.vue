@@ -834,6 +834,10 @@ export default {
   font-size: 24rpx;
   font-weight: 600;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .summary-action-loading {
