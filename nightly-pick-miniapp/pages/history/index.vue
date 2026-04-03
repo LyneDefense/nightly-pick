@@ -144,13 +144,15 @@ export default {
 
 .history-shell {
   min-height: 100vh;
-  padding: calc(var(--status-bar-height, 0px) + 12rpx) 24rpx 220rpx;
+  padding: var(--np-page-top-space) var(--np-page-side-space) var(--np-page-bottom-space);
 }
 
 .history-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding-top: 8rpx;
+  padding-right: var(--np-capsule-avoid-space);
 }
 
 .history-topbar-left {

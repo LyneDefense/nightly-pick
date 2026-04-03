@@ -1,33 +1,44 @@
 {
+  "globalStyle": {
+    "backgroundColor": "#fcf9f0",
+    "backgroundColorTop": "#f2ece0",
+    "backgroundColorBottom": "#fcf9f0",
+    "navigationBarTextStyle": "black"
+  },
   "pages": [
     {
       "path": "pages/home/index",
       "style": {
-        "navigationStyle": "custom"
+        "navigationStyle": "custom",
+        "backgroundColorTop": "#f2ece0"
       }
     },
     {
       "path": "pages/chat/index",
       "style": {
-        "navigationStyle": "custom"
+        "navigationStyle": "custom",
+        "backgroundColorTop": "#f2ece0"
       }
     },
     {
       "path": "pages/history/index",
       "style": {
-        "navigationStyle": "custom"
+        "navigationStyle": "custom",
+        "backgroundColorTop": "#f2ece0"
       }
     },
     {
       "path": "pages/record-detail/index",
       "style": {
-        "navigationStyle": "custom"
+        "navigationStyle": "custom",
+        "backgroundColorTop": "#f2ece0"
       }
     },
     {
       "path": "pages/settings/index",
       "style": {
-        "navigationStyle": "custom"
+        "navigationStyle": "custom",
+        "backgroundColorTop": "#f2ece0"
       }
     }
   ]

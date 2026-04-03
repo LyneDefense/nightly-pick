@@ -9,7 +9,7 @@
     },
     "expected_writer": {
       "summary_contains": ["睡不着", "陪"],
-      "summary_not_contains": ["今天做了", "本来想"]
+      "summary_not_contains": ["今天做了", "本来想", "用户", "assistant:", "user:"]
     }
   },
   {
@@ -21,7 +21,8 @@
       "should_list_unfinished": true
     },
     "expected_writer": {
-      "summary_contains": ["想做但没做", "核心"],
+      "summary_contains": ["我", "想做但没做"],
+      "summary_not_contains": ["用户", "assistant:", "user:", "后来"],
       "open_loops_min": 1
     }
   },
@@ -34,8 +35,21 @@
       "should_list_unfinished": false
     },
     "expected_writer": {
-      "summary_contains": ["今晚", "今天"],
-      "summary_not_contains": ["没做成", "拖着"]
+      "summary_contains": ["今晚", "今天", "我"],
+      "summary_not_contains": ["没做成", "拖着", "用户", "assistant:", "user:"]
+    }
+  },
+  {
+    "name": "first_person_not_chat_minutes",
+    "conversation_text": "user: 今晚闷闷的，想安静待着。\nassistant: 我在。\nuser: 今天吃了很多好吃的东西，但脑子还是停不下来。\nassistant: 还有什么挂着吗？\nuser: 明天想认真把工作做完。现在其实还是有点睡不着，只是想确认你还在。",
+    "expected_plan": {
+      "reflection_depth_in": ["medium", "deep"],
+      "should_list_facts": true,
+      "should_list_unfinished": false
+    },
+    "expected_writer": {
+      "summary_contains": ["我", "今晚", "睡不着"],
+      "summary_not_contains": ["用户", "被问", "回答了", "后来", "最后", "assistant:", "user:"]
     }
   }
 ]

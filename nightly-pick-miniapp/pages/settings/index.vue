@@ -145,13 +145,18 @@ export default {
 
 .settings-shell {
   min-height: 100vh;
-  padding: calc(var(--status-bar-height, 0px) + 12rpx) 24rpx 220rpx;
+  padding: var(--np-page-top-space) var(--np-page-side-space) var(--np-page-bottom-space);
+}
+
+.settings-topbar {
+  padding-right: var(--np-capsule-avoid-space);
 }
 
 .settings-topbar-left {
   display: flex;
   align-items: center;
   gap: 14rpx;
+  padding-top: 8rpx;
 }
 
 .topbar-back {

@@ -8,6 +8,14 @@ page {
 
 :root,
 page {
+  --np-safe-top: env(safe-area-inset-top, 0px);
+  --np-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --np-page-top-space: calc(var(--np-safe-top) + 44rpx);
+  --np-page-side-space: 24rpx;
+  --np-capsule-avoid-space: 176rpx;
+  --np-nav-height: 132rpx;
+  --np-nav-bottom-space: calc(var(--np-safe-bottom) + 12rpx);
+  --np-page-bottom-space: calc(var(--np-nav-height) + var(--np-safe-bottom) + 32rpx);
   --surface-base: #fcf9f0;
   --surface-soft: #f8f3ea;
   --surface-card: rgba(255, 255, 255, 0.9);
@@ -60,6 +68,7 @@ button::after {
 
 .np-page {
   min-height: 100vh;
+  position: relative;
   background:
     radial-gradient(circle at top right, rgba(173, 206, 192, 0.12), transparent 28%),
     radial-gradient(circle at bottom left, rgba(255, 181, 151, 0.12), transparent 30%),
@@ -67,8 +76,26 @@ button::after {
     var(--surface-base);
 }
 
+.np-page::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--np-safe-top) + 88rpx);
+  background:
+    linear-gradient(180deg, rgba(242, 236, 224, 0.96) 0%, rgba(247, 242, 233, 0.84) 68%, rgba(252, 249, 240, 0) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.np-page > * {
+  position: relative;
+  z-index: 1;
+}
+
 .np-shell {
-  padding: calc(var(--status-bar-height, 0px) + 24rpx) 24rpx 180rpx;
+  padding: var(--np-page-top-space) var(--np-page-side-space) var(--np-page-bottom-space);
   box-sizing: border-box;
 }
 
@@ -166,8 +193,8 @@ button::after {
   position: fixed;
   left: 24rpx;
   right: 24rpx;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 20rpx);
-  padding: 18rpx 20rpx calc(env(safe-area-inset-bottom, 0px) + 24rpx);
+  bottom: 0;
+  padding: 18rpx 20rpx var(--np-nav-bottom-space);
   border-radius: 30rpx 30rpx 0 0;
   background: rgba(252, 249, 240, 0.94);
   backdrop-filter: blur(16rpx);

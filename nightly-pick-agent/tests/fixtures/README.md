@@ -6,6 +6,7 @@
 
 - 覆盖不同夜间场景，而不是只测一种“标准复盘”
 - 先验证结构方向对不对，再继续调 prompt
+- 特别盯住 `summary` 是否真的像“用户自己的夜间整理”，而不是聊天纪要
 
 ## 当前样本类型
 
@@ -27,6 +28,17 @@
 - `conversation_text`
 - `expected_plan`
 - `expected_writer`
+
+`expected_writer` 里建议至少覆盖：
+
+- `summary_contains`
+- `summary_not_contains`
+
+尤其要盯这些容易滑偏的点：
+
+- 是否默认使用第一人称
+- 是否出现“用户说 / 我问 / 我回答 / 后来又问 / 最后又说”这类聊天过程复述词
+- 是否把整段对话写成按时间顺序的流水账
 
 建议优先继续补：
 

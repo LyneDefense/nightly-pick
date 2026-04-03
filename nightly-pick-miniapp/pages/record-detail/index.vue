@@ -165,13 +165,15 @@ export default {
 
 .detail-shell {
   min-height: 100vh;
-  padding: calc(var(--status-bar-height, 0px) + 14rpx) 26rpx 210rpx;
+  padding: var(--np-page-top-space) 26rpx calc(var(--np-safe-bottom) + 188rpx);
 }
 
 .detail-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding-top: 8rpx;
+  padding-right: var(--np-capsule-avoid-space);
 }
 
 .detail-back,

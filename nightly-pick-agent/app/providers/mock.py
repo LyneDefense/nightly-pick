@@ -96,23 +96,25 @@ class MockTextProvider(TextProvider):
         )
 
     async def write_reflection(self, request: WriteReflectionRequest) -> GenerateRecordResponse:
-        snippet = request.conversation_text[:40]
+        text = request.conversation_text or ""
         summary_prefix = {
-            "companionship": "今晚更像是在一个睡不着的时刻里，想有人陪着待一会儿。",
-            "light": "今晚有一些想整理的感受，但还停在比较轻的梳理里。",
-            "medium": "今晚已经开始把今天的片段和感受慢慢收拢起来。",
-            "deep": "今晚不只是回顾了今天，也慢慢碰到了真正卡住自己的地方。",
+            "companionship": "今晚我有点睡不着，也不太想把很多话说得很明白，更像只是想有人陪着安静待一会儿。",
+            "light": "今晚我只是轻轻理了一下自己的状态，那种说不清的空和提不起劲还在，但也还不急着把它说透。",
+            "medium": "今晚我开始把今天散着的片段慢慢收拢起来，也更看见自己心里还挂着什么。",
+            "deep": "今晚我不只是回看了今天发生的事，也更清楚地碰到了真正卡住自己的那一处。",
         }[request.plan.reflection_depth]
         summary_parts = [summary_prefix]
+        if "睡不着" in text and "睡不着" not in summary_prefix:
+            summary_parts.append("到现在我还是有点睡不着。")
+        if "陪" in text and "陪" not in summary_prefix:
+            summary_parts.append("比起把一切都说清，我更需要一点陪着待着的感觉。")
         if request.plan.what_happened_today:
-            summary_parts.append("今天提到的事：" + "；".join(request.plan.what_happened_today))
+            summary_parts.append("今天我提到的片段里，" + "；".join(request.plan.what_happened_today) + "。")
         if request.plan.wanted_but_not_done:
-            summary_parts.append("想做但没做的事：" + "；".join(request.plan.wanted_but_not_done))
+            summary_parts.append("我心里还挂着那些想做但没做的部分：" + "；".join(request.plan.wanted_but_not_done) + "。")
         if request.plan.core_tension:
-            summary_parts.append("今晚的核心拉扯是：" + request.plan.core_tension)
-        if snippet:
-            summary_parts.append("这晚对话里也提到了：" + snippet)
-        summary = "\n".join(summary_parts)
+            summary_parts.append("更核心的是，" + request.plan.core_tension)
+        summary = " ".join(summary_parts).strip()
         events = (request.plan.what_happened_today or [])[:3]
         if not events:
             events = ["完成了一次睡前复盘对话"]

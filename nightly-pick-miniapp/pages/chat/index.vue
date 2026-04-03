@@ -49,7 +49,13 @@
         <view class="voice-record-stack">
           <view class="recording-hint">{{ recordingHint }}</view>
           <view :class="['mic-progress-ring', { recording: isRecording }]">
-            <canvas canvas-id="recording-progress-ring" class="mic-progress-canvas"></canvas>
+            <canvas
+              canvas-id="recording-progress-ring"
+              class="mic-progress-canvas"
+              :style="ringCanvasInlineStyle"
+              :width="ringCanvasSizePx"
+              :height="ringCanvasSizePx"
+            ></canvas>
             <button :class="['mic-button', { recording: isRecording }]" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
               <text class="mic-icon">{{ isRecording ? recordingCountdownLabel : "●" }}</text>
             </button>
@@ -108,6 +114,7 @@ export default {
       recordingHint: "长按说话，最多 20 秒",
       recordingElapsedMs: 0,
       recordingMaxDurationMs: 20000,
+      ringCanvasSizePx: 156,
       recorderReady: false,
       autoSavePending: false,
       defaultTime: "22:14",
@@ -145,6 +152,12 @@ export default {
     recordingCountdownLabel() {
       const remainingMs = Math.max(0, this.recordingMaxDurationMs - this.recordingElapsedMs)
       return `${Math.max(1, Math.ceil(remainingMs / 1000))}`
+    },
+    ringCanvasInlineStyle() {
+      return {
+        width: `${this.ringCanvasSizePx}px`,
+        height: `${this.ringCanvasSizePx}px`,
+      }
     },
     userHasSpoken: {
       get() {
@@ -186,6 +199,7 @@ export default {
     },
     async initializePage() {
       try {
+        this.syncRingCanvasSize()
         await this.ensureUserSettings()
         if (this.sessionId && !isCurrentBusinessDate(this.state.activeSessionStartedAt, this.businessDayResetHour)) {
           clearActiveConversation()
@@ -200,6 +214,10 @@ export default {
       } catch (error) {
         showError(error && error.message ? error.message : "初始化会话失败")
       }
+    },
+    syncRingCanvasSize() {
+      const systemInfo = uni.getSystemInfoSync()
+      this.ringCanvasSizePx = Math.round((systemInfo.windowWidth * 156) / 750)
     },
     setupRecorder() {
       if (this.recorderReady) return
@@ -223,13 +241,14 @@ export default {
         } catch (error) {
           showError(error && error.message ? error.message : "语音处理失败")
         } finally {
-          if (!this.isRecording) {
-            this.recordingHint = "长按说话，最多 20 秒"
-          }
+          this.recordingHint = "长按说话，最多 20 秒"
+          this.drawRecordingRing(0)
         }
       })
       recorderManager.onError((error) => {
         this.finishRecordingSession()
+        this.recordingHint = "长按说话，最多 20 秒"
+        this.drawRecordingRing(0)
         console.error("[nightly-pick][recorder] error", error)
         const errorMessage = error && error.errMsg ? `录音失败：${error.errMsg}` : "录音失败，请稍后重试"
         showError(errorMessage)
@@ -330,6 +349,8 @@ export default {
     async stopRecording({ force = false } = {}) {
       if (!recorderManager || !this.isRecording) return
       this.isRecording = false
+      this.recordingHint = "正在整理这段语音..."
+      this.drawRecordingRing(0)
       if (force) {
         this.finishRecordingSession()
       }
@@ -357,10 +378,10 @@ export default {
     },
     drawRecordingRing(percent = 0) {
       const context = uni.createCanvasContext("recording-progress-ring", this)
-      const size = 156
-      const lineWidth = 10
+      const size = this.ringCanvasSizePx
+      const lineWidth = Math.max(6, Math.round(size * 0.064))
       const center = size / 2
-      const radius = center - lineWidth
+      const radius = center - lineWidth * 1.2
       const startAngle = -Math.PI / 2
       const endAngle = startAngle + Math.PI * 2 * (Math.max(0, Math.min(100, percent)) / 100)
 
@@ -597,11 +618,11 @@ export default {
 
 .chat-topbar {
   position: fixed;
-  top: calc(var(--status-bar-height, 0px) + 4rpx);
+  top: calc(var(--np-safe-top) + 4rpx);
   left: 0;
   right: 0;
   z-index: 20;
-  padding: 0 24rpx;
+  padding: 0 calc(24rpx + var(--np-capsule-avoid-space)) 0 24rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -654,7 +675,7 @@ export default {
 
 .chat-scroll {
   min-height: 100vh;
-  padding-top: calc(var(--status-bar-height, 0px) + 88rpx);
+  padding-top: calc(var(--np-safe-top) + 88rpx);
 }
 
 .chat-scroll-inner {
@@ -727,7 +748,7 @@ export default {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 34rpx);
+  bottom: calc(var(--np-safe-bottom) + 22rpx);
   padding: 0 34rpx;
   display: flex;
   align-items: center;
@@ -827,7 +848,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 18rpx 24rpx calc(env(safe-area-inset-bottom, 0px) + 18rpx);
+  padding: 18rpx 24rpx calc(var(--np-safe-bottom) + 18rpx);
   background: rgba(252, 249, 240, 0.9);
   backdrop-filter: blur(14rpx);
 }

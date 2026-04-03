@@ -161,14 +161,14 @@ export default {
 
 .home-shell {
   min-height: 100vh;
-  padding: calc(var(--status-bar-height, 0px) + 20rpx) 0 220rpx;
+  padding: var(--np-page-top-space) 0 var(--np-page-bottom-space);
 }
 
 .home-topbar {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 0 32rpx 24rpx;
+  padding: 8rpx calc(32rpx + var(--np-capsule-avoid-space)) 24rpx 32rpx;
   border-bottom: 1rpx solid rgba(31, 56, 48, 0.06);
 }
 
@@ -193,6 +193,7 @@ export default {
   flex-direction: column;
   align-items: flex-end;
   padding-top: 8rpx;
+  max-width: 240rpx;
 }
 
 .date-text {
