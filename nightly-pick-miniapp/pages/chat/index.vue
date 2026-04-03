@@ -145,6 +145,12 @@ export default {
       inputMode: "voice",
       summaryActionLoading: false,
       summaryActionTriggered: false,
+      lastReplySignals: {
+        dominantMode: "companionship",
+        reflectionReadiness: "not_ready",
+        shouldEnd: false,
+        stage: "opening",
+      },
       state: appState,
     }
   },
@@ -399,10 +405,16 @@ export default {
         } else {
           this.stopAssistantAudio()
         }
+        this.lastReplySignals = {
+          dominantMode: response.dominantMode || "companionship",
+          reflectionReadiness: response.reflectionReadiness || "not_ready",
+          shouldEnd: Boolean(response.shouldEnd),
+          stage: response.stage || "exploring",
+        }
         setConversationSummary(response.summaryStatus)
         this.inputMode = inputType === "voice" ? "voice" : "text"
         this.bumpScroll()
-        if (response.shouldEnd || response.stage === "closing") {
+        if (this.shouldAutoRequestSummary()) {
           this.scheduleAutoSummary()
         }
       } catch (error) {
@@ -618,6 +630,14 @@ export default {
       autoSummaryTimer = setTimeout(() => {
         this.requestSummary({ userInitiated: false })
       }, 12000)
+    },
+    shouldAutoRequestSummary() {
+      if (!this.hasMeaningfulUnsummarizedContent) return false
+      const readiness = this.lastReplySignals.reflectionReadiness || "not_ready"
+      const dominantMode = this.lastReplySignals.dominantMode || "companionship"
+      const stage = this.lastReplySignals.stage || "exploring"
+      if (readiness === "ready") return true
+      return readiness === "light_ready" && dominantMode !== "companionship" && stage === "closing"
     },
     clearAutoSummaryTimer() {
       if (!autoSummaryTimer) return

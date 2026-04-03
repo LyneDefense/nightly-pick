@@ -24,6 +24,8 @@ class MockTextProviderTests(unittest.TestCase):
         self.assertIn("最近提到过", response.reply_text)
         self.assertIn("状态的变化", response.reply_text)
         self.assertEqual("opening", response.stage)
+        self.assertEqual("sorting", response.dominant_mode)
+        self.assertIn(response.reflection_readiness, {"light_ready", "ready"})
 
     def test_chat_reply_offers_record_when_conversation_is_ready_to_close(self) -> None:
         request = ChatReplyRequest(
@@ -41,6 +43,8 @@ class MockTextProviderTests(unittest.TestCase):
         response = asyncio.run(self.provider.chat_reply(request))
         self.assertTrue(response.should_end)
         self.assertEqual("closing", response.stage)
+        self.assertEqual("review", response.dominant_mode)
+        self.assertEqual("ready", response.reflection_readiness)
         self.assertIn("轻轻收在这里", response.reply_text)
         self.assertNotIn("要不要我帮你整理成今晚记录", response.reply_text)
 

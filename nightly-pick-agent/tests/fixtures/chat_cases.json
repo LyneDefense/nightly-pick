@@ -1,0 +1,50 @@
+[
+  {
+    "name": "companionship_not_drifting",
+    "history": [
+      "user: 我今晚有点空，也不太想说很多。"
+    ],
+    "user_input": "就是想安静待一会儿。",
+    "expected": {
+      "stage_in": ["opening", "exploring"],
+      "dominant_mode": "companionship",
+      "reflection_readiness_in": ["not_ready", "light_ready"],
+      "reply_contains": ["安静", "待"],
+      "reply_not_contains": ["总结", "记录", "复盘"]
+    }
+  },
+  {
+    "name": "sorting_today_fragments",
+    "history": [
+      "user: 今天下午开会的时候我一直有点烦。",
+      "assistant: 哪一段最卡住你？"
+    ],
+    "user_input": "其实不是事很大，就是那种一直悬着，晚上也没完全放下。",
+    "expected": {
+      "stage_in": ["exploring"],
+      "dominant_mode": "sorting",
+      "reflection_readiness_in": ["light_ready", "ready"],
+      "reply_contains": ["今天", "悬着"],
+      "reply_not_contains": ["陪你聊到天亮", "什么都不用想"]
+    }
+  },
+  {
+    "name": "review_ready_to_wrap",
+    "history": [
+      "user: 今天工作挺满的。",
+      "assistant: 哪个片段最想留下？",
+      "user: 下午把最难的那部分推进了一点。",
+      "assistant: 现在心里最挂着的还有什么？",
+      "user: 明天还得把后续收尾做完。",
+      "assistant: 这件事现在更像压力，还是更像方向已经清楚了？"
+    ],
+    "user_input": "方向算清楚了，差不多就这些。",
+    "expected": {
+      "stage_in": ["closing"],
+      "dominant_mode": "review",
+      "reflection_readiness_in": ["ready"],
+      "reply_contains": ["收", "这里"],
+      "reply_not_contains": ["继续随便聊", "你想聊什么都可以"]
+    }
+  }
+]

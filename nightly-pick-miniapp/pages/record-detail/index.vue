@@ -87,7 +87,7 @@ export default {
     },
     displayOpenLoops() {
       if (!this.record || !Array.isArray(this.record.openLoops) || !this.record.openLoops.length) {
-        return ["明天10点的项目评审", "给家里打个电话"]
+        return []
       }
       return this.record.openLoops
     },

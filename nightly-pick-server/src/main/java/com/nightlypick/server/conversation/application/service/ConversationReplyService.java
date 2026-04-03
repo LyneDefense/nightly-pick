@@ -111,6 +111,8 @@ public class ConversationReplyService {
                 assistantAudioUrl,
                 reply.shouldEnd(),
                 reply.stage(),
+                reply.dominantMode(),
+                reply.reflectionReadiness(),
                 new ConversationSummaryStatusResponse(summaryStatus, todayRecord == null ? null : todayRecord.id(), 0, 0)
         );
     }

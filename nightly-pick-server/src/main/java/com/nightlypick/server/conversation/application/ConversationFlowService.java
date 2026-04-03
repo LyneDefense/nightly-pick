@@ -71,6 +71,8 @@ public class ConversationFlowService {
                 response.assistantAudioUrl(),
                 response.shouldEnd(),
                 response.stage(),
+                response.dominantMode(),
+                response.reflectionReadiness(),
                 toApiStatus(resolveSummaryStatus(session), session)
         );
     }

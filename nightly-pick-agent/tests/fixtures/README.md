@@ -1,6 +1,6 @@
 # Reflection Fixtures
 
-这组 fixture 用来持续打磨 `reflection planner` 和 `reflection writer`。
+这组 fixture 用来持续打磨 `chat reply`、`reflection planner` 和 `reflection writer`。
 
 ## 目标
 
@@ -9,6 +9,10 @@
 - 特别盯住 `summary` 是否真的像“用户自己的夜间整理”，而不是聊天纪要
 
 ## 当前样本类型
+
+- `chat_cases.json`
+  - 用来约束对话不要滑成纯陪伴闲聊
+  - 重点看回复是否仍在轻轻推进“夜间整理”
 
 - `companionship_insomnia`
   - 更像睡不着、想有人在
@@ -28,6 +32,20 @@
 - `conversation_text`
 - `expected_plan`
 - `expected_writer`
+
+`chat_cases.json` 里建议至少覆盖：
+
+- `stage_in`
+- `dominant_mode`
+- `reflection_readiness_in`
+- `reply_contains`
+- `reply_not_contains`
+
+尤其要盯这些容易滑偏的点：
+
+- 陪伴模式下是否还能保持轻整理方向，而不是彻底散成闲聊
+- sorting / review 模式下是否真的在帮助用户回到“今天留下了什么”
+- 临近收束时是否能自然收住，而不是继续开放式漫聊
 
 `expected_writer` 里建议至少覆盖：
 

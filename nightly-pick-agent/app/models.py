@@ -37,6 +37,8 @@ class ChatReplyResponse(CamelModel):
     reply_text: str
     should_end: bool
     stage: Literal["opening", "exploring", "closing"]
+    dominant_mode: Literal["companionship", "sorting", "review"]
+    reflection_readiness: Literal["not_ready", "light_ready", "ready"]
 
 
 class GenerateRecordRequest(CamelModel):

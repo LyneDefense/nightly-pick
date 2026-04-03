@@ -43,7 +43,9 @@ class ConversationFlowIntegrationTests {
         given(agentClient.getChatReply(any())).willReturn(new AgentChatReplyResponse(
                 "我记下了，今天最值得保留的瞬间是什么？",
                 false,
-                "exploring"
+                "exploring",
+                "sorting",
+                "light_ready"
         ));
         given(agentClient.synthesizeSpeech(any())).willReturn(new AgentSynthesizeSpeechResponse(
                 "https://example.com/audio/reply.mp3",
@@ -122,7 +124,9 @@ class ConversationFlowIntegrationTests {
         given(agentClient.getChatReply(any())).willReturn(new AgentChatReplyResponse(
                 "继续说说看。",
                 false,
-                "exploring"
+                "exploring",
+                "sorting",
+                "light_ready"
         ));
         given(agentClient.synthesizeSpeech(any())).willReturn(new AgentSynthesizeSpeechResponse(
                 "https://example.com/audio/reply.mp3",

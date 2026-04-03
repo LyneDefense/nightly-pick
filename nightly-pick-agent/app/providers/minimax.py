@@ -48,18 +48,25 @@ class MiniMaxTextProvider(TextProvider):
         self.settings = settings
 
     async def chat_reply(self, request: ChatReplyRequest) -> ChatReplyResponse:
-        should_end = len(request.history) >= 5
         logger.info(
             "开始生成对话回复 sessionId=%s historyCount=%s allowMemoryReference=%s shouldEnd=%s",
             request.session_id,
             len(request.history),
             request.allow_memory_reference,
-            should_end,
+            len(request.history) >= 5,
         )
+        schema_instruction = """
+返回 JSON，字段必须包含：
+reply_text: string
+should_end: boolean
+stage: opening|exploring|closing
+dominant_mode: companionship|sorting|review
+reflection_readiness: not_ready|light_ready|ready
+""".strip()
         messages = [
             {
                 "role": "system",
-                "content": f"{BASE_SYSTEM_PROMPT}\n\n{CONVERSATION_STRATEGY_PROMPT}",
+                "content": f"{BASE_SYSTEM_PROMPT}\n\n{CONVERSATION_STRATEGY_PROMPT}\n\n{schema_instruction}",
             }
         ]
         if request.profile_summary:
@@ -94,27 +101,32 @@ class MiniMaxTextProvider(TextProvider):
                     + "\n".join(f"- {item}" for item in request.recent_memories[:3]),
                 }
             )
-        if should_end:
-            messages.append(
-                {
-                    "role": "system",
-                    "content": "这轮对话已经接近收束。请先用一两句话温和收住用户今晚说到的重点，不要要求用户同意生成总结，也不要直接发出生成记录的请求。只需要给出自然的收束感，并保留继续倾诉的空间。",
-                }
-            )
         for item in request.history[-6:]:
             role = "assistant" if item.startswith("assistant:") else "user"
             content = item.split(":", 1)[1].strip() if ":" in item else item
             messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": request.user_input})
-        content = await self._chat_completion(messages)
-        stage = "closing" if should_end else ("opening" if len(request.history) < 2 else "exploring")
+        payload = self._parse_json(await self._chat_completion(messages))
+        reply_text = self._sanitize_text(str(payload.get("reply_text", "") or ""))
+        stage = self._normalize_stage(payload.get("stage"), request.history)
+        dominant_mode = self._normalize_dominant_mode(payload.get("dominant_mode"))
+        reflection_readiness = self._normalize_reflection_readiness(payload.get("reflection_readiness"), dominant_mode, stage)
+        should_end = bool(payload.get("should_end", False))
         logger.info(
-            "对话回复生成完成 sessionId=%s stage=%s replyLength=%s",
+            "对话回复生成完成 sessionId=%s stage=%s mode=%s readiness=%s replyLength=%s",
             request.session_id,
             stage,
-            len(content),
+            dominant_mode,
+            reflection_readiness,
+            len(reply_text),
         )
-        return ChatReplyResponse(reply_text=content, should_end=should_end, stage=stage)
+        return ChatReplyResponse(
+            reply_text=reply_text,
+            should_end=should_end,
+            stage=stage,
+            dominant_mode=dominant_mode,
+            reflection_readiness=reflection_readiness,
+        )
 
     async def generate_record(self, request: GenerateRecordRequest) -> GenerateRecordResponse:
         plan = await self.plan_reflection(
@@ -401,6 +413,31 @@ highlight: string
     def _sanitize_text(content: str) -> str:
         sanitized = re.sub(r"<think>.*?</think>", "", content, flags=re.DOTALL).strip()
         return sanitized or content.strip()
+
+    @staticmethod
+    def _normalize_stage(value: object, history: list[str]) -> str:
+        stage = str(value or "").strip()
+        if stage in {"opening", "exploring", "closing"}:
+            return stage
+        return "opening" if len(history) < 2 else "exploring"
+
+    @staticmethod
+    def _normalize_dominant_mode(value: object) -> str:
+        mode = str(value or "").strip()
+        if mode in {"companionship", "sorting", "review"}:
+            return mode
+        return "sorting"
+
+    @staticmethod
+    def _normalize_reflection_readiness(value: object, dominant_mode: str, stage: str) -> str:
+        readiness = str(value or "").strip()
+        if readiness in {"not_ready", "light_ready", "ready"}:
+            return readiness
+        if dominant_mode == "review" or stage == "closing":
+            return "ready"
+        if dominant_mode == "sorting":
+            return "light_ready"
+        return "not_ready"
 
 
 class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
