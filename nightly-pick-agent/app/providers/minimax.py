@@ -106,7 +106,7 @@ reflection_readiness: not_ready|light_ready|ready
             content = item.split(":", 1)[1].strip() if ":" in item else item
             messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": request.user_input})
-        payload = self._parse_chat_payload(await self._chat_completion(messages), request)
+        payload = await self._chat_with_json_retry(messages, request)
         reply_text = self._sanitize_text(str(payload.get("reply_text", "") or ""))
         stage = self._normalize_stage(payload.get("stage"), request.history)
         dominant_mode = self._normalize_dominant_mode(payload.get("dominant_mode"))
@@ -128,28 +128,57 @@ reflection_readiness: not_ready|light_ready|ready
             reflection_readiness=reflection_readiness,
         )
 
+    async def _chat_with_json_retry(self, messages: list[dict[str, str]], request: ChatReplyRequest) -> dict:
+        first_content = await self._chat_completion(messages)
+        try:
+            return self._parse_chat_payload(first_content, request)
+        except HTTPException:
+            logger.warning("聊天模型首次未返回合法 JSON，准备携带修复提示重试 sessionId=%s", request.session_id)
+            retry_messages = [
+                *messages,
+                {"role": "assistant", "content": self._sanitize_text(first_content)},
+                {
+                    "role": "system",
+                    "content": (
+                        "你刚才没有按要求输出合法 JSON。"
+                        "请基于刚才同一轮回复意图，重新输出一次。"
+                        "只能返回一个合法 JSON 对象，不要附加解释、前言、markdown 代码块或额外文本。"
+                        "字段必须包含：reply_text, should_end, stage, dominant_mode, reflection_readiness。"
+                    ),
+                },
+            ]
+            second_content = await self._chat_completion(retry_messages)
+            try:
+                return self._parse_chat_payload(second_content, request)
+            except HTTPException:
+                logger.warning("聊天模型二次修复后仍未返回合法 JSON，回退为纯文本解析 sessionId=%s", request.session_id)
+                return self._fallback_chat_payload(second_content, request)
+
     def _parse_chat_payload(self, content: str, request: ChatReplyRequest) -> dict:
         try:
             return self._parse_json(content)
         except HTTPException:
-            fallback_text = self._sanitize_text(content)
-            fallback_stage = self._normalize_stage(None, request.history)
-            fallback_mode = self._infer_chat_mode(request)
-            fallback_readiness = self._normalize_reflection_readiness(None, fallback_mode, fallback_stage)
-            logger.warning(
-                "聊天模型未返回合法 JSON，已回退为纯文本解析 sessionId=%s mode=%s readiness=%s content=%s",
-                request.session_id,
-                fallback_mode,
-                fallback_readiness,
-                fallback_text,
-            )
-            return {
-                "reply_text": fallback_text,
-                "should_end": False,
-                "stage": fallback_stage,
-                "dominant_mode": fallback_mode,
-                "reflection_readiness": fallback_readiness,
-            }
+            raise
+
+    def _fallback_chat_payload(self, content: str, request: ChatReplyRequest) -> dict:
+        fallback_text = self._sanitize_text(content)
+        fallback_stage = self._normalize_stage(None, request.history)
+        fallback_mode = self._infer_chat_mode(request)
+        fallback_readiness = self._normalize_reflection_readiness(None, fallback_mode, fallback_stage)
+        logger.warning(
+            "聊天模型未返回合法 JSON，已回退为纯文本解析 sessionId=%s mode=%s readiness=%s content=%s",
+            request.session_id,
+            fallback_mode,
+            fallback_readiness,
+            fallback_text,
+        )
+        return {
+            "reply_text": fallback_text,
+            "should_end": False,
+            "stage": fallback_stage,
+            "dominant_mode": fallback_mode,
+            "reflection_readiness": fallback_readiness,
+        }
 
     async def generate_record(self, request: GenerateRecordRequest) -> GenerateRecordResponse:
         plan = await self.plan_reflection(
