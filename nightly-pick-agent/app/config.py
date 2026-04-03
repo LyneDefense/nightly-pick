@@ -14,12 +14,13 @@ class Settings(BaseSettings):
 
     text_model: str = "MiniMax-M2.5"
     minimax_api_key: str | None = None
-    minimax_text_base_url: str = "https://api.minimax.io/v1"
+    minimax_text_base_url: str = "https://api.minimaxi.com/v1"
 
-    minimax_speech_base_url: str = "https://api.minimax.io/v1"
+    minimax_speech_base_url: str = "https://api.minimaxi.com/v1"
     minimax_tts_model: str = "speech-2.8-turbo"
     minimax_tts_voice_id: str = "Chinese (Mandarin)_Warm_Bestie"
     minimax_asr_endpoint: str | None = None
+    http_trust_env: bool = True
 
     tencent_asr_secret_id: str | None = None
     tencent_asr_secret_key: str | None = None

@@ -114,9 +114,9 @@
 <script>
 import { createConversation, getActiveConversation, getConversation, requestConversationSummary, sendMessage } from "../../services/conversation"
 import { transcribeAudio, uploadAudio } from "../../services/audio"
-import { getRecords } from "../../services/records"
+import { generateShareCard, getRecords } from "../../services/records"
 import { getSettings } from "../../services/settings"
-import { buildTodayShareCardDraft, cacheShareCardDraft, hasGeneratedTodayCard } from "../../utils/share-card"
+import { buildShareCardDraft, cacheShareCardDraft, hasGeneratedTodayCard } from "../../utils/share-card"
 import {
   appState,
   appendChatMessage,
@@ -836,20 +836,25 @@ export default {
       }
       this.shareCardPromptVisible = true
     },
-    handleGenerateCard() {
+    async handleGenerateCard() {
       const record = this.latestTodayRecord
       if (!record) {
         showError("这一页还没准备好")
         return
       }
-      const draft = buildTodayShareCardDraft(record)
-      if (!draft) {
-        showError("这一页还不足以生成卡片")
-        return
+      try {
+        const generatedCopy = await generateShareCard(record.id, "today")
+        const draft = buildShareCardDraft(record, "today", generatedCopy)
+        if (!draft) {
+          showError("这一页还不足以生成卡片")
+          return
+        }
+        cacheShareCardDraft(draft)
+        this.shareCardPromptVisible = false
+        uni.navigateTo({ url: "/pages/share-card-result/index?from=chat" })
+      } catch (error) {
+        showError(error && error.message ? error.message : "卡片文案生成失败")
       }
-      cacheShareCardDraft(draft)
-      this.shareCardPromptVisible = false
-      uni.navigateTo({ url: "/pages/share-card-result/index?from=chat" })
     },
     async goBack() {
       this.stopRecording({ force: true })

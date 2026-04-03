@@ -4,6 +4,8 @@ import com.nightlypick.server.agent.dto.AgentChatReplyRequest;
 import com.nightlypick.server.agent.dto.AgentChatReplyResponse;
 import com.nightlypick.server.agent.dto.AgentGenerateRecordRequest;
 import com.nightlypick.server.agent.dto.AgentGenerateRecordResponse;
+import com.nightlypick.server.agent.dto.AgentGenerateShareCardRequest;
+import com.nightlypick.server.agent.dto.AgentGenerateShareCardResponse;
 import com.nightlypick.server.agent.dto.AgentPlanReflectionRequest;
 import com.nightlypick.server.agent.dto.AgentPlanReflectionResponse;
 import com.nightlypick.server.agent.dto.AgentWriteReflectionRequest;
@@ -19,6 +21,8 @@ public interface AgentClient {
     AgentChatReplyResponse getChatReply(AgentChatReplyRequest request);
 
     AgentGenerateRecordResponse generateRecord(AgentGenerateRecordRequest request);
+
+    AgentGenerateShareCardResponse generateShareCard(AgentGenerateShareCardRequest request);
 
     AgentPlanReflectionResponse planReflection(AgentPlanReflectionRequest request);
 

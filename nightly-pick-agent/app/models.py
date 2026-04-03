@@ -98,6 +98,23 @@ class GenerateRecordResponse(CamelModel):
     highlight: str
 
 
+class GenerateShareCardRequest(CamelModel):
+    record_id: str = Field(..., min_length=1)
+    card_type: Literal["today", "recent"]
+    record_date: str = Field(..., min_length=1)
+    title: str | None = None
+    summary: str | None = None
+    highlight: str | None = None
+    events: list[str] = Field(default_factory=list)
+    emotions: list[str] = Field(default_factory=list)
+    open_loops: list[str] = Field(default_factory=list)
+
+
+class GenerateShareCardResponse(CamelModel):
+    headline: str
+    subline: str
+
+
 class ExtractMemoryRequest(CamelModel):
     record_id: str = Field(..., min_length=1)
     summary: str = Field(..., min_length=1)

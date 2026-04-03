@@ -1,3 +1,6 @@
+import todayCardBackground from "../static/share-cards/today/today-01.png"
+import recentCardBackground from "../static/share-cards/recent/recent-01.png"
+
 export const SHARE_CARD_CANVAS = {
   width: 1080,
   height: 1920,
@@ -7,14 +10,14 @@ export const TODAY_SHARE_CARD_TEMPLATES = [
   {
     id: "today-01",
     type: "today",
-    background: "/static/share-cards/today/today-01.png",
+    background: todayCardBackground,
     dateColor: "rgba(244, 243, 238, 0.84)",
     headlineColor: "#f5f3ec",
     sublineColor: "rgba(245, 243, 236, 0.72)",
     brandColor: "rgba(245, 243, 236, 0.54)",
-    datePosition: { x: 112, y: 188 },
-    headlineBox: { x: 112, y: 320, width: 764, lineHeight: 118, fontSize: 92 },
-    sublineBox: { x: 120, y: 1210, width: 820, lineHeight: 58, fontSize: 36 },
+    datePosition: { x: 112, y: 196 },
+    headlineBox: { x: 112, y: 312, width: 856, lineHeight: 92, fontSize: 70, maxLines: 3 },
+    sublineBox: { x: 120, y: 1278, width: 840, lineHeight: 52, fontSize: 34, maxLines: 5 },
     brandPosition: { x: 120, y: 1760 },
   },
 ]
@@ -23,14 +26,14 @@ export const RECENT_SHARE_CARD_TEMPLATES = [
   {
     id: "recent-01",
     type: "recent",
-    background: "/static/share-cards/recent/recent-01.png",
+    background: recentCardBackground,
     dateColor: "rgba(244, 243, 238, 0.8)",
     headlineColor: "#f5f3ec",
     sublineColor: "rgba(245, 243, 236, 0.72)",
     brandColor: "rgba(245, 243, 236, 0.54)",
-    datePosition: { x: 112, y: 188 },
-    headlineBox: { x: 112, y: 318, width: 790, lineHeight: 110, fontSize: 88 },
-    sublineBox: { x: 120, y: 1210, width: 820, lineHeight: 58, fontSize: 36 },
+    datePosition: { x: 112, y: 196 },
+    headlineBox: { x: 112, y: 312, width: 856, lineHeight: 92, fontSize: 70, maxLines: 3 },
+    sublineBox: { x: 120, y: 1278, width: 840, lineHeight: 52, fontSize: 34, maxLines: 5 },
     brandPosition: { x: 120, y: 1760 },
   },
 ]

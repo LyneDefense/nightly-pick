@@ -7,6 +7,8 @@ from app.models import (
     ExtractMemoryResponse,
     GenerateRecordRequest,
     GenerateRecordResponse,
+    GenerateShareCardRequest,
+    GenerateShareCardResponse,
     PlanReflectionRequest,
     PlanReflectionResponse,
     SynthesizeSpeechRequest,
@@ -36,6 +38,10 @@ class TextProvider(ABC):
 
     @abstractmethod
     async def extract_memory(self, request: ExtractMemoryRequest) -> ExtractMemoryResponse:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def generate_share_card(self, request: GenerateShareCardRequest) -> GenerateShareCardResponse:
         raise NotImplementedError
 
 

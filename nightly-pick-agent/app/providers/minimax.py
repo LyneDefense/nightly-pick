@@ -15,6 +15,8 @@ from app.models import (
     ExtractMemoryResponse,
     GenerateRecordRequest,
     GenerateRecordResponse,
+    GenerateShareCardRequest,
+    GenerateShareCardResponse,
     MemoryItem,
     PlanReflectionRequest,
     PlanReflectionResponse,
@@ -30,6 +32,7 @@ from app.prompts import (
     RECORD_GENERATION_PROMPT,
     REFLECTION_PLANNER_PROMPT,
     REFLECTION_WRITER_PROMPT,
+    SHARE_CARD_GENERATION_PROMPT,
 )
 from app.providers.base import SpeechSynthesizeProvider, SpeechTranscribeProvider, TextProvider
 
@@ -340,6 +343,53 @@ highlight: string
         )
         return response
 
+    async def generate_share_card(self, request: GenerateShareCardRequest) -> GenerateShareCardResponse:
+        logger.info("开始生成分享卡片文案 recordId=%s cardType=%s", request.record_id, request.card_type)
+        schema_instruction = """
+返回 JSON，字段必须包含：
+headline: string
+subline: string
+""".strip()
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    f"{BASE_SYSTEM_PROMPT}\n\n{SHARE_CARD_GENERATION_PROMPT}\n\n"
+                    f"{self._build_share_card_type_prompt(request.card_type)}\n\n{schema_instruction}"
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "record_id": request.record_id,
+                        "card_type": request.card_type,
+                        "record_date": request.record_date,
+                        "title": request.title,
+                        "summary": request.summary,
+                        "highlight": request.highlight,
+                        "events": request.events,
+                        "emotions": request.emotions,
+                        "open_loops": request.open_loops,
+                    },
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+        payload = self._parse_json(await self._chat_completion(messages))
+        response = GenerateShareCardResponse(
+            headline=self._sanitize_text(str(payload.get("headline", "") or "")),
+            subline=self._sanitize_text(str(payload.get("subline", "") or "")),
+        )
+        logger.info(
+            "分享卡片文案生成完成 recordId=%s cardType=%s headlineLength=%s sublineLength=%s",
+            request.record_id,
+            request.card_type,
+            len(response.headline),
+            len(response.subline),
+        )
+        return response
+
     async def extract_memory(self, request: ExtractMemoryRequest) -> ExtractMemoryResponse:
         logger.info(
             "开始抽取长期记忆 recordId=%s summaryLength=%s existingMemoryCount=%s",
@@ -507,6 +557,28 @@ highlight: string
         if len(request.history) >= 6:
             return "review"
         return "companionship"
+
+    @staticmethod
+    def _build_share_card_type_prompt(card_type: str) -> str:
+        if card_type == "today":
+            return """
+# Card Type Focus
+这次生成的是 `today` 卡片。
+1. 它代表“今晚刚刚沉下来的这一页”。
+2. 语气要贴近当下，更近、更轻，不要写出明显的回望感。
+3. 可以保留一点还没完全放下的余温，但不要写成总结报告。
+4. 更像睡前替自己留下一页，而不是隔很久之后的回顾。
+5. 即使今晚的原始记录里有具体人物、场景或事件，也不要把这些隐私细节写进分享文案。
+""".strip()
+        return """
+# Card Type Focus
+这次生成的是 `recent` 卡片。
+1. 它代表“隔一段时间后重新翻回来看的一页”。
+2. 语气允许有一点回望感和距离感，但不要写成年度总结。
+3. 更像重新看见那时的自己，而不是重新写一遍当天摘要。
+4. 可以有“后来再看才懂一点”的轻微后视角。
+5. 即使回望感更强，也不要借机带出当时具体的人、事、地点或其他可识别隐私线索。
+""".strip()
 
 
 class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):

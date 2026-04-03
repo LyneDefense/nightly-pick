@@ -1,7 +1,15 @@
 from fastapi import APIRouter, Body, Depends
 
 from app.dependencies import get_agent_service
-from app.models import GenerateRecordRequest, GenerateRecordResponse, PlanReflectionRequest, PlanReflectionResponse, WriteReflectionRequest
+from app.models import (
+    GenerateRecordRequest,
+    GenerateRecordResponse,
+    GenerateShareCardRequest,
+    GenerateShareCardResponse,
+    PlanReflectionRequest,
+    PlanReflectionResponse,
+    WriteReflectionRequest,
+)
 from app.services.agent_service import AgentService
 
 router = APIRouter()
@@ -29,3 +37,11 @@ async def write_reflection(
     agent_service: AgentService = Depends(get_agent_service),
 ) -> GenerateRecordResponse:
     return await agent_service.write_reflection(request)
+
+
+@router.post("/share-card", response_model=GenerateShareCardResponse, response_model_by_alias=False)
+async def generate_share_card(
+    request: GenerateShareCardRequest = Body(...),
+    agent_service: AgentService = Depends(get_agent_service),
+) -> GenerateShareCardResponse:
+    return await agent_service.generate_share_card(request)

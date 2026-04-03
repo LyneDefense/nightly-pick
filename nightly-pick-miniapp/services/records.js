@@ -14,6 +14,14 @@ export function getRecord(recordId) {
   })
 }
 
+export function generateShareCard(recordId, cardType) {
+  return request({
+    url: `/records/${recordId}/share-card`,
+    method: "POST",
+    data: { cardType },
+  })
+}
+
 export function updateRecord(recordId, payload) {
   return request({
     url: `/records/${recordId}`,

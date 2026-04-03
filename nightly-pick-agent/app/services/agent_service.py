@@ -5,6 +5,8 @@ from app.models import (
     ExtractMemoryResponse,
     GenerateRecordRequest,
     GenerateRecordResponse,
+    GenerateShareCardRequest,
+    GenerateShareCardResponse,
     PlanReflectionRequest,
     PlanReflectionResponse,
     SynthesizeSpeechRequest,
@@ -41,6 +43,9 @@ class AgentService:
 
     async def extract_memory(self, request: ExtractMemoryRequest) -> ExtractMemoryResponse:
         return await self.text_provider.extract_memory(request)
+
+    async def generate_share_card(self, request: GenerateShareCardRequest) -> GenerateShareCardResponse:
+        return await self.text_provider.generate_share_card(request)
 
     async def transcribe(self, request: TranscribeAudioRequest) -> TranscribeAudioResponse:
         return await self.speech_transcribe_provider.transcribe(request)

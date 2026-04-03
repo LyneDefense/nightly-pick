@@ -11,6 +11,7 @@ app/providers/__init__.py
 app/providers/base.py
 app/providers/minimax.py
 app/providers/mock.py
+app/providers/tencent_asr.py
 app/routes/chat.py
 app/routes/health.py
 app/routes/memory.py
@@ -24,4 +25,6 @@ nightly_pick_agent.egg-info/SOURCES.txt
 nightly_pick_agent.egg-info/dependency_links.txt
 nightly_pick_agent.egg-info/requires.txt
 nightly_pick_agent.egg-info/top_level.txt
+tests/test_chat_fixtures.py
 tests/test_mock_providers.py
+tests/test_reflection_fixtures.py

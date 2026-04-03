@@ -10,6 +10,8 @@ import com.nightlypick.server.agent.dto.AgentExtractMemoryRequest;
 import com.nightlypick.server.agent.dto.AgentExtractMemoryResponse;
 import com.nightlypick.server.agent.dto.AgentGenerateRecordRequest;
 import com.nightlypick.server.agent.dto.AgentGenerateRecordResponse;
+import com.nightlypick.server.agent.dto.AgentGenerateShareCardRequest;
+import com.nightlypick.server.agent.dto.AgentGenerateShareCardResponse;
 import com.nightlypick.server.agent.dto.AgentPlanReflectionRequest;
 import com.nightlypick.server.agent.dto.AgentPlanReflectionResponse;
 import com.nightlypick.server.agent.dto.AgentSynthesizeSpeechRequest;
@@ -59,6 +61,11 @@ public class HttpAgentClient implements AgentClient {
     @Override
     public AgentGenerateRecordResponse generateRecord(AgentGenerateRecordRequest request) {
         return post("/record/generate", request, AgentGenerateRecordResponse.class);
+    }
+
+    @Override
+    public AgentGenerateShareCardResponse generateShareCard(AgentGenerateShareCardRequest request) {
+        return post("/record/share-card", request, AgentGenerateShareCardResponse.class);
     }
 
     @Override
@@ -135,6 +142,7 @@ public class HttpAgentClient implements AgentClient {
     private String extractSessionId(Object requestBody) {
         if (requestBody instanceof AgentChatReplyRequest request) return request.sessionId();
         if (requestBody instanceof AgentGenerateRecordRequest request) return request.sessionId();
+        if (requestBody instanceof AgentGenerateShareCardRequest request) return request.recordId();
         if (requestBody instanceof AgentPlanReflectionRequest request) return request.sessionId();
         if (requestBody instanceof AgentWriteReflectionRequest request) return request.sessionId();
         if (requestBody instanceof AgentTranscribeAudioRequest request) return request.sessionId();

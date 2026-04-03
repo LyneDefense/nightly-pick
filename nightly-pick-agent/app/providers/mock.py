@@ -5,6 +5,8 @@ from app.models import (
     ExtractMemoryResponse,
     GenerateRecordRequest,
     GenerateRecordResponse,
+    GenerateShareCardRequest,
+    GenerateShareCardResponse,
     MemoryItem,
     PlanReflectionRequest,
     PlanReflectionResponse,
@@ -20,6 +22,22 @@ MAX_OPEN_LOOPS = 6
 
 
 class MockTextProvider(TextProvider):
+    @staticmethod
+    def _share_card_prompt_hint(card_type: str) -> dict[str, str]:
+        if card_type == "today":
+            return {
+                "headline_fallback": "今晚有些事没有答案，也先这样收下来了。",
+                "headline_with_highlight": "今晚被留下来的，是那一点终于慢下来的感觉。",
+                "subline_fallback": "不是把一切都想明白了，只是把今晚真正停住的地方，轻轻替自己留了下来。",
+                "subline_with_emotions": "今晚的情绪落在{emotions}之间，这一页不急着解释，只先替自己留住。",
+            }
+        return {
+            "headline_fallback": "隔了一些时候再看，这一页还是值得留下。",
+            "headline_with_highlight": "后来再回看，才发现那晚的停顿也有它的重量。",
+            "subline_fallback": "不是为了回到那一天，而是再看见一次，当时的自己是怎样慢慢走过来的。",
+            "subline_with_emotions": "那时的情绪落在{emotions}之间，如今回看，仍能认出那晚的自己。",
+        }
+
     async def chat_reply(self, request: ChatReplyRequest) -> ChatReplyResponse:
         combined_text = " ".join([*request.history, request.user_input])
         has_today_signal = any(keyword in combined_text for keyword in ["今天", "今晚", "下午", "晚上", "刚刚", "开会", "下班"])
@@ -168,6 +186,15 @@ class MockTextProvider(TextProvider):
                 )
             )
         return ExtractMemoryResponse(short_term_memory=memories[:3])
+
+    async def generate_share_card(self, request: GenerateShareCardRequest) -> GenerateShareCardResponse:
+        hint = self._share_card_prompt_hint(request.card_type)
+        emotions = [item for item in (request.emotions or []) if item]
+        headline = hint["headline_with_highlight"] if request.highlight else hint["headline_fallback"]
+        subline = hint["subline_fallback"]
+        if emotions:
+            subline = hint["subline_with_emotions"].format(emotions="、".join(emotions[:2]))
+        return GenerateShareCardResponse(headline=headline, subline=subline)
 
 
 class MockSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):

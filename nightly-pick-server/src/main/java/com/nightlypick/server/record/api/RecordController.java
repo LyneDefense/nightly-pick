@@ -1,5 +1,8 @@
 package com.nightlypick.server.record.api;
 
+import com.nightlypick.server.agent.dto.AgentGenerateShareCardRequest;
+import com.nightlypick.server.agent.dto.AgentGenerateShareCardResponse;
+import com.nightlypick.server.agent.service.AgentClient;
 import com.nightlypick.server.common.api.ApiResponse;
 import com.nightlypick.server.conversation.application.store.DailyRecordStore;
 import com.nightlypick.server.record.domain.DailyRecord;
@@ -18,9 +21,11 @@ import java.util.List;
 public class RecordController {
 
     private final DailyRecordStore dailyRecordStore;
+    private final AgentClient agentClient;
 
-    public RecordController(DailyRecordStore dailyRecordStore) {
+    public RecordController(DailyRecordStore dailyRecordStore, AgentClient agentClient) {
         this.dailyRecordStore = dailyRecordStore;
+        this.agentClient = agentClient;
     }
 
     @GetMapping
@@ -31,6 +36,31 @@ public class RecordController {
     @GetMapping("/{recordId}")
     public ApiResponse<DailyRecord> getRecord(@PathVariable String recordId) {
         return ApiResponse.ok(dailyRecordStore.getRecord(recordId));
+    }
+
+    @PostMapping("/{recordId}/share-card")
+    public ApiResponse<GenerateShareCardResponse> generateShareCard(
+            @PathVariable String recordId,
+            @RequestBody GenerateShareCardRequest request
+    ) {
+        DailyRecord record = dailyRecordStore.getRecord(recordId);
+        String cardType = request == null || request.cardType() == null || request.cardType().isBlank()
+                ? "today"
+                : request.cardType();
+        AgentGenerateShareCardResponse response = agentClient.generateShareCard(
+                new AgentGenerateShareCardRequest(
+                        record.id(),
+                        cardType,
+                        record.date() == null ? "" : record.date().toString(),
+                        record.title(),
+                        record.summary(),
+                        record.highlight(),
+                        record.events(),
+                        record.emotions(),
+                        record.openLoops()
+                )
+        );
+        return ApiResponse.ok(new GenerateShareCardResponse(cardType, response.headline(), response.subline()));
     }
 
     @PatchMapping("/{recordId}")

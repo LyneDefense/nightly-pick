@@ -63,9 +63,14 @@
 </template>
 
 <script>
-import { deleteRecord, getRecord, updateRecord } from "../../services/records"
+import { deleteRecord, generateShareCard, getRecord, updateRecord } from "../../services/records"
 import { appState, removeRecord, upsertRecord } from "../../stores/app-state"
-import { buildTodayShareCardDraft, cacheShareCardDraft, hasGeneratedTodayCard } from "../../utils/share-card"
+import { getCurrentBusinessDate } from "../../utils/business-day"
+import {
+  buildShareCardDraft,
+  cacheShareCardDraft,
+  hasGeneratedTodayCard,
+} from "../../utils/share-card"
 import { showError, showSuccess } from "../../utils/ui"
 
 export default {
@@ -81,6 +86,16 @@ export default {
     }
   },
   computed: {
+    businessDayResetHour() {
+      return this.state.user ? this.state.user.businessDayResetHour : null
+    },
+    currentBusinessDate() {
+      return getCurrentBusinessDate(this.businessDayResetHour, new Date())
+    },
+    shareCardType() {
+      if (!this.record || !this.record.date) return "today"
+      return this.record.date === this.currentBusinessDate ? "today" : "recent"
+    },
     displayEmotions() {
       if (!this.record || !Array.isArray(this.record.emotions) || !this.record.emotions.length) {
         return ["平静", "略有焦虑", "释然"]
@@ -116,9 +131,12 @@ export default {
     },
     hasTodayCard() {
       void this.shareCardVersion
-      return this.record && this.record.date ? hasGeneratedTodayCard(this.record.date) : false
+      return this.shareCardType === "today" && this.record && this.record.date ? hasGeneratedTodayCard(this.record.date) : false
     },
     cardActionText() {
+      if (this.shareCardType === "recent") {
+        return "生成回顾卡片"
+      }
       return this.hasTodayCard ? "重新生成" : "生成卡片"
     },
   },
@@ -189,15 +207,20 @@ export default {
     toggleOpenLoops() {
       this.showAllOpenLoops = !this.showAllOpenLoops
     },
-    handleGenerateCard() {
+    async handleGenerateCard() {
       if (!this.record) return
-      const draft = buildTodayShareCardDraft(this.record)
-      if (!draft) {
-        showError("这页还不足以生成卡片")
-        return
+      try {
+        const generatedCopy = await generateShareCard(this.record.id, this.shareCardType)
+        const draft = buildShareCardDraft(this.record, this.shareCardType, generatedCopy)
+        if (!draft) {
+          showError("这页还不足以生成卡片")
+          return
+        }
+        cacheShareCardDraft(draft)
+        uni.navigateTo({ url: "/pages/share-card-result/index?from=detail" })
+      } catch (error) {
+        showError(error && error.message ? error.message : "卡片文案生成失败")
       }
-      cacheShareCardDraft(draft)
-      uni.navigateTo({ url: "/pages/share-card-result/index?from=detail" })
     },
   },
 }

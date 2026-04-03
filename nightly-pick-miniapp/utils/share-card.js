@@ -60,7 +60,7 @@ export function formatTodayCardDate(date) {
   if (!date) return ""
   const [year, month, day] = String(date).split("-")
   if (!year || !month || !day) return date
-  return `${month}.${day}`
+  return `${year}.${month}.${day}`
 }
 
 export function formatRecentCardPeriod(date) {
@@ -99,5 +99,39 @@ export function buildTodayShareCardDraft(record) {
     dateLabel: formatTodayCardDate(record.date),
     headline,
     subline,
+  }
+}
+
+export function buildRecentShareCardDraft(record) {
+  if (!record) return null
+  const highlight = sanitizeCardText(record.highlight)
+  const summary = sanitizeCardText(record.summary)
+  const title = sanitizeCardText(record.title)
+  const emotions = Array.isArray(record.emotions) ? record.emotions.filter(Boolean) : []
+  const headline = truncateCardText(highlight || title || "这一段夜色，也值得被重新翻阅。", 28)
+  const summarySource =
+    summary ||
+    (emotions.length ? `那段时间的情绪落在 ${emotions.slice(0, 2).join("、")} 之间，仍然值得回看。` : "")
+  const subline = truncateCardText(summarySource || "不是为了回到当时，而是为了看见自己是怎样走过来的。", 72)
+  return {
+    type: "recent",
+    recordId: record.id,
+    date: record.date,
+    dateLabel: formatRecentCardPeriod(record.date),
+    headline,
+    subline,
+  }
+}
+
+export function buildShareCardDraft(record, cardType, generatedCopy) {
+  if (!record || !generatedCopy) return null
+  const normalizedType = cardType === "recent" ? "recent" : "today"
+  return {
+    type: normalizedType,
+    recordId: record.id,
+    date: record.date,
+    dateLabel: normalizedType === "recent" ? formatRecentCardPeriod(record.date) : formatTodayCardDate(record.date),
+    headline: truncateCardText(generatedCopy.headline || "", 28),
+    subline: truncateCardText(generatedCopy.subline || "", 72),
   }
 }
