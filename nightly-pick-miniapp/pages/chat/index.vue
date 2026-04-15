@@ -67,18 +67,23 @@
       </view>
 
       <view v-else-if="inputMode === 'voice'" class="voice-composer">
-        <button class="mode-switch voice-switch" @click="toggleInputMode">
-          <view class="keyboard-icon">
-            <view class="keyboard-top">
-              <text class="keyboard-dot"></text>
-              <text class="keyboard-dot"></text>
-              <text class="keyboard-dot"></text>
-            </view>
-            <view class="keyboard-bottom"></view>
+        <view class="voice-bar">
+          <view class="voice-bar-copy">
+            <text class="voice-bar-title">长按说话</text>
+            <text class="voice-bar-subtitle">{{ recordingHint }}</text>
           </view>
-        </button>
-        <view class="voice-shell">
-          <view class="recording-hint">{{ recordingHint }}</view>
+          <button class="mode-switch voice-switch" @click="toggleInputMode">
+            <view class="keyboard-icon">
+              <view class="keyboard-top">
+                <text class="keyboard-dot"></text>
+                <text class="keyboard-dot"></text>
+                <text class="keyboard-dot"></text>
+              </view>
+              <view class="keyboard-bottom"></view>
+            </view>
+          </button>
+        </view>
+        <view class="voice-stage">
           <view :class="['mic-progress-ring', { recording: isRecording }]" :style="recordingRingStyle">
             <button :class="['mic-button', { recording: isRecording }]" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
               <text class="mic-icon">{{ isRecording ? recordingCountdownLabel : "●" }}</text>
@@ -941,11 +946,11 @@ export default {
 }
 
 .voice-mode {
-  --np-chat-dock-space: 228rpx;
+  --np-chat-dock-space: 266rpx;
 }
 
 .text-mode {
-  --np-chat-dock-space: 156rpx;
+  --np-chat-dock-space: 176rpx;
 }
 
 .chat-topbar {
@@ -1044,8 +1049,13 @@ export default {
   right: 0;
   bottom: 0;
   z-index: 22;
-  padding: 0 34rpx calc(var(--np-safe-bottom) + 22rpx);
+  padding: 0 24rpx calc(var(--np-safe-bottom) + 22rpx);
   box-sizing: border-box;
+  border-top-left-radius: 28rpx;
+  border-top-right-radius: 28rpx;
+  background: rgba(252, 249, 240, 0.96);
+  box-shadow: 0 -12rpx 32rpx rgba(31, 56, 48, 0.08);
+  overflow: hidden;
 }
 
 .send-error-copy {
@@ -1199,7 +1209,9 @@ export default {
 .voice-composer {
   position: relative;
   width: 100%;
-  height: 228rpx;
+  min-height: 266rpx;
+  padding: 20rpx 20rpx 22rpx;
+  box-sizing: border-box;
 }
 
 .readonly-composer {
@@ -1229,28 +1241,49 @@ export default {
 }
 
 .voice-switch {
-  position: absolute;
-  left: 34rpx;
-  top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
 }
 
-.voice-shell {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 156rpx;
-  height: 156rpx;
-  transform: translate(-50%, -50%);
+.voice-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 2rpx 2rpx 18rpx;
+}
+
+.voice-bar-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.voice-bar-title {
+  display: block;
+  font-size: 28rpx;
+  line-height: 1.3;
+  color: rgba(31, 56, 48, 0.9);
+  font-weight: 700;
+}
+
+.voice-bar-subtitle {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+  color: rgba(31, 56, 48, 0.48);
+}
+
+.voice-stage {
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: 186rpx;
 }
 
 .recording-hint {
   position: absolute;
   left: 50%;
-  bottom: calc(100% + 18rpx);
+  bottom: calc(100% + 16rpx);
   transform: translateX(-50%);
   width: 156rpx;
   text-align: center;
@@ -1305,9 +1338,10 @@ export default {
 
 .text-composer {
   width: 100%;
-  padding: 18rpx 0 0;
-  background: rgba(252, 249, 240, 0.9);
+  min-height: 176rpx;
+  padding: 26rpx 20rpx 18rpx;
   backdrop-filter: blur(14rpx);
+  box-sizing: border-box;
 }
 
 .text-composer {
