@@ -149,6 +149,9 @@ export default {
     return {
       loading: false,
       isRecording: false,
+      recordingStarting: false,
+      recordingStarted: false,
+      recordingStopQueued: false,
       recordingHint: "长按说话，最多 20 秒",
       recordingElapsedMs: 0,
       recordingMaxDurationMs: 20000,
@@ -361,6 +364,15 @@ export default {
     setupRecorder() {
       if (this.recorderReady) return
       recorderManager = uni.getRecorderManager()
+      recorderManager.onStart(() => {
+        this.recordingStarting = false
+        this.recordingStarted = true
+        this.isRecording = true
+        if (this.recordingStopQueued) {
+          this.recordingStopQueued = false
+          this.stopRecording()
+        }
+      })
       recorderManager.onStop(async (result) => {
         this.finishRecordingSession()
         try {
@@ -386,6 +398,8 @@ export default {
       recorderManager.onError((error) => {
         this.finishRecordingSession()
         this.recordingHint = "长按说话，最多 20 秒"
+        this.recordingStarting = false
+        this.recordingStopQueued = false
         console.error("[nightly-pick][recorder] error", error)
         const errorMessage = error && error.errMsg ? `录音失败：${error.errMsg}` : "录音失败，请稍后重试"
         showError(errorMessage)
@@ -556,11 +570,13 @@ export default {
     },
     async startRecording() {
       if (this.readOnlyMode) return
-      if (!recorderManager || this.isRecording || this.loading) return
+      if (!recorderManager || this.isRecording || this.recordingStarting || this.loading) return
       const permissionGranted = await this.ensureRecordPermission()
       if (!permissionGranted) return
       this.stopAssistantAudio()
-      this.isRecording = true
+      this.recordingStarting = true
+      this.recordingStarted = false
+      this.recordingStopQueued = false
       this.recordingHint = "松开发送，20 秒后自动发出"
       this.recordingElapsedMs = 0
       this.startRecordingProgress()
@@ -572,11 +588,20 @@ export default {
       })
     },
     async stopRecording({ force = false } = {}) {
-      if (!recorderManager || !this.isRecording) return
+      if (!recorderManager) return
+      if (!this.recordingStarted && !force) {
+        this.recordingStopQueued = true
+        return
+      }
+      this.recordingStarting = false
+      this.recordingStopQueued = false
       this.isRecording = false
       this.recordingHint = "正在整理这段语音..."
       if (force) {
         this.finishRecordingSession()
+      }
+      if (!this.recordingStarted) {
+        return
       }
       recorderManager.stop()
     },
@@ -592,6 +617,9 @@ export default {
     },
     finishRecordingSession() {
       this.isRecording = false
+      this.recordingStarting = false
+      this.recordingStarted = false
+      this.recordingStopQueued = false
       if (recordingProgressTimer) {
         clearInterval(recordingProgressTimer)
         recordingProgressTimer = null
