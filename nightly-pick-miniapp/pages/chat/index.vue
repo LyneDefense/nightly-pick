@@ -59,48 +59,49 @@
         <text class="send-error-title">{{ failedSendTitle }}</text>
         <text class="send-error-desc">{{ failedSendDescription }}</text>
       </view>
-      <button v-if="failedSendState.mode === 'retry'" class="send-error-button" :disabled="loading" @click="retryFailedSend">再试一次</button>
     </view>
 
-    <view v-if="readOnlyMode" class="readonly-composer">
-      <text>这是一段已经收好的历史对话，只能回看。</text>
-    </view>
+    <view class="chat-dock">
+      <view v-if="readOnlyMode" class="readonly-composer">
+        <text>这是一段已经收好的历史对话，只能回看。</text>
+      </view>
 
-    <view v-else-if="inputMode === 'voice'" class="voice-composer">
-      <button class="mode-switch voice-switch" @click="toggleInputMode">
-        <view class="keyboard-icon">
-          <view class="keyboard-top">
-            <text class="keyboard-dot"></text>
-            <text class="keyboard-dot"></text>
-            <text class="keyboard-dot"></text>
+      <view v-else-if="inputMode === 'voice'" class="voice-composer">
+        <button class="mode-switch voice-switch" @click="toggleInputMode">
+          <view class="keyboard-icon">
+            <view class="keyboard-top">
+              <text class="keyboard-dot"></text>
+              <text class="keyboard-dot"></text>
+              <text class="keyboard-dot"></text>
+            </view>
+            <view class="keyboard-bottom"></view>
           </view>
-          <view class="keyboard-bottom"></view>
-        </view>
-      </button>
-      <view class="voice-shell">
-        <view class="recording-hint">{{ recordingHint }}</view>
-        <view :class="['mic-progress-ring', { recording: isRecording }]" :style="recordingRingStyle">
-          <button :class="['mic-button', { recording: isRecording }]" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
-            <text class="mic-icon">{{ isRecording ? recordingCountdownLabel : "●" }}</text>
-          </button>
+        </button>
+        <view class="voice-shell">
+          <view class="recording-hint">{{ recordingHint }}</view>
+          <view :class="['mic-progress-ring', { recording: isRecording }]" :style="recordingRingStyle">
+            <button :class="['mic-button', { recording: isRecording }]" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
+              <text class="mic-icon">{{ isRecording ? recordingCountdownLabel : "●" }}</text>
+            </button>
+          </view>
         </view>
       </view>
-    </view>
 
-    <view v-else class="text-composer">
-      <button class="text-back-mode" @click="toggleInputMode">◉</button>
-      <view class="text-input-shell">
-        <textarea
-          v-model="inputValue"
-          class="text-input"
-          placeholder="输入今晚的想法..."
-          confirm-type="send"
-          auto-height
-          @confirm="handleSend"
-        />
+      <view v-else class="text-composer">
+        <button class="text-back-mode" @click="toggleInputMode">◉</button>
+        <view class="text-input-shell">
+          <textarea
+            v-model="inputValue"
+            class="text-input"
+            placeholder="输入今晚的想法..."
+            confirm-type="send"
+            auto-height
+            @confirm="handleSend"
+          />
+        </view>
+        <button class="send-button" :disabled="loading || !inputValue.trim()" @click="handleSend">➤</button>
+        <text class="text-footnote">RECORDING THE WHISPERS OF THE NIGHT</text>
       </view>
-      <button class="send-button" :disabled="loading || !inputValue.trim()" @click="handleSend">➤</button>
-      <text class="text-footnote">RECORDING THE WHISPERS OF THE NIGHT</text>
     </view>
     <phone-login-modal
       :visible="loginVisible"
@@ -939,6 +940,14 @@ export default {
     #fcf9f0;
 }
 
+.voice-mode {
+  --np-chat-dock-space: 228rpx;
+}
+
+.text-mode {
+  --np-chat-dock-space: 156rpx;
+}
+
 .chat-topbar {
   position: fixed;
   top: calc(var(--np-safe-top) + 4rpx);
@@ -990,10 +999,11 @@ export default {
 .chat-scroll {
   min-height: 100vh;
   padding-top: calc(var(--np-safe-top) + 88rpx);
+  padding-bottom: calc(var(--np-safe-bottom) + var(--np-chat-dock-space, 190rpx) + 28rpx);
 }
 
 .chat-scroll-inner {
-  padding: 20rpx 24rpx 420rpx;
+  padding: 20rpx 24rpx calc(var(--np-safe-bottom) + var(--np-chat-dock-space, 190rpx) + 120rpx);
 }
 
 .inline-summary-card {
@@ -1015,7 +1025,7 @@ export default {
   position: fixed;
   left: 24rpx;
   right: 24rpx;
-  bottom: calc(var(--np-safe-bottom) + 318rpx);
+  bottom: calc(var(--np-safe-bottom) + var(--np-chat-dock-space, 190rpx) + 92rpx);
   z-index: 18;
   padding: 22rpx 24rpx;
   border-radius: 24rpx;
@@ -1026,6 +1036,16 @@ export default {
   display: flex;
   align-items: center;
   gap: 18rpx;
+}
+
+.chat-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 22;
+  padding: 0 34rpx calc(var(--np-safe-bottom) + 22rpx);
+  box-sizing: border-box;
 }
 
 .send-error-copy {
@@ -1177,22 +1197,13 @@ export default {
 }
 
 .voice-composer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(var(--np-safe-bottom) + 22rpx);
-  z-index: 22;
+  position: relative;
+  width: 100%;
   height: 228rpx;
-  padding: 0 34rpx;
-  box-sizing: border-box;
 }
 
 .readonly-composer {
-  position: fixed;
-  left: 32rpx;
-  right: 32rpx;
-  bottom: calc(var(--np-safe-bottom) + 28rpx);
-  z-index: 20;
+  width: 100%;
   padding: 22rpx 24rpx;
   border-radius: 8rpx;
   background: rgba(31, 56, 48, 0.06);
@@ -1293,11 +1304,8 @@ export default {
 }
 
 .text-composer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 18rpx 24rpx calc(var(--np-safe-bottom) + 18rpx);
+  width: 100%;
+  padding: 18rpx 0 0;
   background: rgba(252, 249, 240, 0.9);
   backdrop-filter: blur(14rpx);
 }
