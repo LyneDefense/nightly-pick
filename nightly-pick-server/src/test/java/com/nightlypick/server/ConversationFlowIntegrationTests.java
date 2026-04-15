@@ -67,13 +67,10 @@ class ConversationFlowIntegrationTests {
         });
         given(agentClient.transcribeAudio(any())).willReturn(new AgentTranscribeAudioResponse("这是示例转写"));
 
-        mockMvc.perform(post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nickname\":\"测试用户\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.user.nickname").value("测试用户"));
+        String authorization = loginAsTestUser();
 
-        String createResponse = mockMvc.perform(post("/conversations"))
+        String createResponse = mockMvc.perform(post("/conversations")
+                        .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.sessionId").exists())
                 .andReturn()
@@ -83,13 +80,15 @@ class ConversationFlowIntegrationTests {
         String sessionId = createResponse.replaceAll(".*\"sessionId\":\"([^\"]+)\".*", "$1");
 
         mockMvc.perform(post("/conversations/" + sessionId + "/messages")
+                        .header("Authorization", authorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"今天工作很满，但也推进了一点\",\"inputType\":\"voice\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.assistantReply").value("我记下了，今天最值得保留的瞬间是什么？"))
                 .andExpect(jsonPath("$.data.assistantAudioUrl").value("https://example.com/audio/reply.mp3"));
 
-        String completeResponse = mockMvc.perform(post("/conversations/" + sessionId + "/complete"))
+        String completeResponse = mockMvc.perform(post("/conversations/" + sessionId + "/complete")
+                        .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.recordId").exists())
                 .andExpect(jsonPath("$.data.merged").value(false))
@@ -99,22 +98,26 @@ class ConversationFlowIntegrationTests {
 
         String recordId = completeResponse.replaceAll(".*\"recordId\":\"([^\"]+)\".*", "$1");
 
-        mockMvc.perform(get("/records/" + recordId))
+        mockMvc.perform(get("/records/" + recordId)
+                        .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("今夜记录"));
 
         mockMvc.perform(patch("/records/" + recordId)
+                        .header("Authorization", authorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"title\":\"修改后的标题\",\"summary\":\"修改后的摘要\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("修改后的标题"))
                 .andExpect(jsonPath("$.data.summary").value("修改后的摘要"));
 
-        mockMvc.perform(get("/memories"))
+        mockMvc.perform(get("/memories")
+                        .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].content").value("最近持续提到项目压力"));
 
-        mockMvc.perform(delete("/records/" + recordId))
+        mockMvc.perform(delete("/records/" + recordId)
+                        .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(true));
     }
@@ -156,21 +159,21 @@ class ConversationFlowIntegrationTests {
             );
         });
 
-        mockMvc.perform(post("/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"nickname\":\"测试用户\"}"))
-                .andExpect(status().isOk());
+        String authorization = loginAsTestUser();
 
-        String sessionId1 = mockMvc.perform(post("/conversations"))
+        String sessionId1 = mockMvc.perform(post("/conversations")
+                        .header("Authorization", authorization))
                 .andReturn().getResponse().getContentAsString()
                 .replaceAll(".*\"sessionId\":\"([^\"]+)\".*", "$1");
 
         mockMvc.perform(post("/conversations/" + sessionId1 + "/messages")
+                        .header("Authorization", authorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"上午开会很累\",\"inputType\":\"text\"}"))
                 .andExpect(status().isOk());
 
-        String firstCompleteResponse = mockMvc.perform(post("/conversations/" + sessionId1 + "/complete"))
+        String firstCompleteResponse = mockMvc.perform(post("/conversations/" + sessionId1 + "/complete")
+                        .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andReturn()
                 .getResponse()
@@ -178,16 +181,19 @@ class ConversationFlowIntegrationTests {
 
         String firstRecordId = firstCompleteResponse.replaceAll(".*\"recordId\":\"([^\"]+)\".*", "$1");
 
-        String sessionId2 = mockMvc.perform(post("/conversations"))
+        String sessionId2 = mockMvc.perform(post("/conversations")
+                        .header("Authorization", authorization))
                 .andReturn().getResponse().getContentAsString()
                 .replaceAll(".*\"sessionId\":\"([^\"]+)\".*", "$1");
 
         mockMvc.perform(post("/conversations/" + sessionId2 + "/messages")
+                        .header("Authorization", authorization)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"text\":\"晚上散步后心情缓和\",\"inputType\":\"text\"}"))
                 .andExpect(status().isOk());
 
-        String secondCompleteResponse = mockMvc.perform(post("/conversations/" + sessionId2 + "/complete"))
+        String secondCompleteResponse = mockMvc.perform(post("/conversations/" + sessionId2 + "/complete")
+                        .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.merged").value(true))
                 .andExpect(jsonPath("$.data.notice").value("已合并到今日总结"))
@@ -197,7 +203,8 @@ class ConversationFlowIntegrationTests {
 
         String secondRecordId = secondCompleteResponse.replaceAll(".*\"recordId\":\"([^\"]+)\".*", "$1");
 
-        mockMvc.perform(get("/records"))
+        mockMvc.perform(get("/records")
+                        .header("Authorization", authorization))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(1))
                 .andExpect(jsonPath("$.data[0].id").value(firstRecordId))
@@ -212,20 +219,33 @@ class ConversationFlowIntegrationTests {
 
     @Test
     void shouldExposeConversationHistoryOnLegacyAndCurrentPaths() throws Exception {
-        mockMvc.perform(post("/auth/login")
+        String authorization = loginAsTestUser();
+
+        mockMvc.perform(post("/conversations")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/conversations/history")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groups[0].key").value("recent7"));
+
+        mockMvc.perform(get("/conversations/history/list")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groups[0].key").value("recent7"));
+    }
+
+    private String loginAsTestUser() throws Exception {
+        String response = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"nickname\":\"测试用户\"}"))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(post("/conversations"))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(get("/conversations/history"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.groups[0].key").value("recent7"));
-
-        mockMvc.perform(get("/conversations/history/list"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.groups[0].key").value("recent7"));
+                .andExpect(jsonPath("$.data.token").exists())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        String token = response.replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+        return "Bearer " + token;
     }
 }

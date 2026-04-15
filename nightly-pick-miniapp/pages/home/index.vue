@@ -53,24 +53,37 @@
     </view>
 
     <np-bottom-nav active="home" />
+    <phone-login-modal
+      :visible="loginVisible"
+      :loading="loginLoading"
+      @phone-login="handlePhoneLogin"
+      @cancel="cancelLogin"
+    />
   </view>
 </template>
 
 <script>
 import NpBottomNav from "../../components/NpBottomNav.vue"
-import { login } from "../../services/auth"
+import PhoneLoginModal from "../../components/PhoneLoginModal.vue"
 import { getRecords } from "../../services/records"
 import { getActiveConversation } from "../../services/conversation"
-import { appState, clearActiveConversation, hydrateConversation, setRecords, setUser } from "../../stores/app-state"
+import { appState, clearActiveConversation, hydrateConversation, setRecords } from "../../stores/app-state"
 import { isCurrentBusinessDate } from "../../utils/business-day"
+import { isAuthenticated } from "../../services/session"
+import { loginFromPhoneDetail, restoreAuthState } from "../../utils/auth-flow"
 import { showError } from "../../utils/ui"
 
 const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
 
 export default {
-  components: { NpBottomNav },
+  components: { NpBottomNav, PhoneLoginModal },
   data() {
-    return { state: appState }
+    return {
+      state: appState,
+      loginVisible: false,
+      loginLoading: false,
+      pendingAction: null,
+    }
   },
   computed: {
     businessDayResetHour() {
@@ -105,9 +118,11 @@ export default {
   methods: {
     async loadHome() {
       try {
-        if (!this.state.user) {
-          const response = await login()
-          setUser(response.user)
+        restoreAuthState()
+        if (!isAuthenticated()) {
+          clearActiveConversation()
+          setRecords([])
+          return
         }
         if (this.state.activeSessionId && !isCurrentBusinessDate(this.state.activeSessionStartedAt, this.businessDayResetHour)) {
           clearActiveConversation()
@@ -148,18 +163,53 @@ export default {
       return String(dateValue).replace(/-/g, ".")
     },
     goToChat() {
-      const url = this.hasActiveConversation ? `/pages/chat/index?sessionId=${this.state.activeSessionId}` : "/pages/chat/index"
-      uni.navigateTo({ url })
+      this.requireLogin(() => {
+        const url = this.hasActiveConversation ? `/pages/chat/index?sessionId=${this.state.activeSessionId}` : "/pages/chat/index"
+        uni.navigateTo({ url })
+      })
     },
     goToConversationHistory() {
-      uni.navigateTo({ url: "/pages/conversation-history/index" })
+      this.requireLogin(() => {
+        uni.navigateTo({ url: "/pages/conversation-history/index" })
+      })
     },
     openLatestRecord() {
-      if (!this.latestRecord) {
-        uni.reLaunch({ url: "/pages/history/index" })
+      this.requireLogin(() => {
+        if (!this.latestRecord) {
+          uni.reLaunch({ url: "/pages/history/index" })
+          return
+        }
+        uni.navigateTo({ url: `/pages/record-detail/index?recordId=${this.latestRecord.id}&source=home` })
+      })
+    },
+    requireLogin(action) {
+      restoreAuthState()
+      if (isAuthenticated()) {
+        action()
         return
       }
-      uni.navigateTo({ url: `/pages/record-detail/index?recordId=${this.latestRecord.id}&source=home` })
+      this.pendingAction = action
+      this.loginVisible = true
+    },
+    async handlePhoneLogin(event) {
+      if (this.loginLoading) return
+      this.loginLoading = true
+      try {
+        await loginFromPhoneDetail(event && event.detail)
+        this.loginVisible = false
+        await this.loadHome()
+        const action = this.pendingAction
+        this.pendingAction = null
+        if (action) action()
+      } catch (error) {
+        showError(error && error.message ? error.message : "登录失败")
+      } finally {
+        this.loginLoading = false
+      }
+    },
+    cancelLogin() {
+      this.loginVisible = false
+      this.pendingAction = null
     },
   },
 }

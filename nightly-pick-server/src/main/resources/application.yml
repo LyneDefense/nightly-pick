@@ -33,6 +33,11 @@ audio:
 business-day:
   reset-hour: ${BUSINESS_DAY_RESET_HOUR:6}
 
+wechat:
+  miniapp:
+    app-id: ${WECHAT_MINIAPP_APP_ID:}
+    secret: ${WECHAT_MINIAPP_SECRET:}
+
 logging:
   level:
     root: INFO

@@ -12,7 +12,6 @@ import com.nightlypick.server.conversation.application.store.DailyRecordStore;
 import com.nightlypick.server.conversation.application.store.MemoryStore;
 import com.nightlypick.server.conversation.domain.ConversationMessage;
 import com.nightlypick.server.record.domain.DailyRecord;
-import com.nightlypick.server.user.application.UserContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -34,7 +33,6 @@ public class RecordGenerationService {
     private final DailyRecordStore dailyRecordStore;
     private final MemoryStore memoryStore;
     private final AgentClient agentClient;
-    private final UserContext userContext;
     private final BusinessDayClock businessDayClock;
 
     public RecordGenerationService(
@@ -42,14 +40,12 @@ public class RecordGenerationService {
             DailyRecordStore dailyRecordStore,
             MemoryStore memoryStore,
             AgentClient agentClient,
-            UserContext userContext,
             BusinessDayClock businessDayClock
     ) {
         this.conversationSessionStore = conversationSessionStore;
         this.dailyRecordStore = dailyRecordStore;
         this.memoryStore = memoryStore;
         this.agentClient = agentClient;
-        this.userContext = userContext;
         this.businessDayClock = businessDayClock;
     }
 
@@ -61,7 +57,7 @@ public class RecordGenerationService {
         if (!hasUserContent) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No user content to summarize.");
         }
-        String userId = userContext.getCurrentUserId();
+        String userId = conversationSessionStore.getSession(sessionId).userId();
         String conversationText = messages.stream()
                 .map(message -> message.role() + ": " + message.text())
                 .collect(Collectors.joining("\n"));

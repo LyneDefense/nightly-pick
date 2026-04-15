@@ -46,18 +46,30 @@
         <text>{{ frozenCount }} 次更早的对话已冷冻保存，暂不在列表里显示。</text>
       </view>
     </view>
+    <phone-login-modal
+      :visible="loginVisible"
+      :loading="loginLoading"
+      @phone-login="handlePhoneLogin"
+      @cancel="goBack"
+    />
   </view>
 </template>
 
 <script>
+import PhoneLoginModal from "../../components/PhoneLoginModal.vue"
 import { getConversationHistory } from "../../services/conversation"
+import { isAuthenticated } from "../../services/session"
+import { loginFromPhoneDetail, restoreAuthState } from "../../utils/auth-flow"
 import { showError } from "../../utils/ui"
 
 export default {
+  components: { PhoneLoginModal },
   data() {
     return {
       groups: [],
       frozenCount: 0,
+      loginVisible: false,
+      loginLoading: false,
     }
   },
   computed: {
@@ -69,6 +81,11 @@ export default {
     },
   },
   onShow() {
+    restoreAuthState()
+    if (!isAuthenticated()) {
+      this.loginVisible = true
+      return
+    }
     this.loadHistory()
   },
   methods: {
@@ -97,6 +114,19 @@ export default {
     openConversation(sessionId) {
       if (!sessionId) return
       uni.navigateTo({ url: `/pages/chat/index?sessionId=${sessionId}&readonly=1&source=conversation-history` })
+    },
+    async handlePhoneLogin(event) {
+      if (this.loginLoading) return
+      this.loginLoading = true
+      try {
+        await loginFromPhoneDetail(event && event.detail)
+        this.loginVisible = false
+        await this.loadHistory()
+      } catch (error) {
+        showError(error && error.message ? error.message : "登录失败")
+      } finally {
+        this.loginLoading = false
+      }
     },
     goBack() {
       uni.reLaunch({ url: "/pages/home/index" })

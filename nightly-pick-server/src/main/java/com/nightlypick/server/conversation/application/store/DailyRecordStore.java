@@ -79,9 +79,11 @@ public class DailyRecordStore {
         return toDomain(entity);
     }
 
-    public List<DailyRecord> listRecords() {
+    public List<DailyRecord> listRecords(String userId) {
         return recordMapper.selectList(
-                        new QueryWrapper<DailyRecordEntity>().orderByDesc("created_at")
+                        new QueryWrapper<DailyRecordEntity>()
+                                .eq("user_id", userId)
+                                .orderByDesc("created_at")
                 ).stream()
                 .map(this::toDomain)
                 .toList();
@@ -93,6 +95,14 @@ public class DailyRecordStore {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Record not found: " + recordId);
         }
         return toDomain(entity);
+    }
+
+    public DailyRecord getRecordForUser(String recordId, String userId) {
+        DailyRecord record = getRecord(recordId);
+        if (!record.userId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Record not found: " + recordId);
+        }
+        return record;
     }
 
     public DailyRecord updateRecord(String recordId, String title, String summary) {
@@ -113,12 +123,22 @@ public class DailyRecordStore {
         return toDomain(entity);
     }
 
+    public DailyRecord updateRecordForUser(String recordId, String userId, String title, String summary) {
+        getRecordForUser(recordId, userId);
+        return updateRecord(recordId, title, summary);
+    }
+
     public void deleteRecord(String recordId) {
         DailyRecordEntity entity = recordMapper.selectById(recordId);
         if (entity == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Record not found: " + recordId);
         }
         recordMapper.deleteById(recordId);
+    }
+
+    public void deleteRecordForUser(String recordId, String userId) {
+        getRecordForUser(recordId, userId);
+        deleteRecord(recordId);
     }
 
     private DailyRecord toDomain(DailyRecordEntity entity) {

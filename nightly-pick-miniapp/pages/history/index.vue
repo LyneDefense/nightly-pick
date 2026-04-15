@@ -61,25 +61,36 @@
     </view>
 
     <np-bottom-nav active="history" />
+    <phone-login-modal
+      :visible="loginVisible"
+      :loading="loginLoading"
+      @phone-login="handlePhoneLogin"
+      @cancel="goToHome"
+    />
   </view>
 </template>
 
 <script>
 import NpBottomNav from "../../components/NpBottomNav.vue"
+import PhoneLoginModal from "../../components/PhoneLoginModal.vue"
 import { getRecords } from "../../services/records"
 import { appState, setRecords } from "../../stores/app-state"
+import { isAuthenticated } from "../../services/session"
+import { loginFromPhoneDetail, restoreAuthState } from "../../utils/auth-flow"
 import { showError } from "../../utils/ui"
 
 const MONTHS_EN = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
 
 export default {
-  components: { NpBottomNav },
+  components: { NpBottomNav, PhoneLoginModal },
   data() {
     const now = new Date()
     return {
       state: appState,
       visibleMonth: now.getMonth(),
       visibleYear: now.getFullYear(),
+      loginVisible: false,
+      loginLoading: false,
     }
   },
   computed: {
@@ -104,6 +115,11 @@ export default {
     },
   },
   onShow() {
+    restoreAuthState()
+    if (!isAuthenticated()) {
+      this.loginVisible = true
+      return
+    }
     this.loadRecords()
   },
   methods: {
@@ -140,6 +156,19 @@ export default {
     },
     goToConversationHistory() {
       uni.navigateTo({ url: "/pages/conversation-history/index" })
+    },
+    async handlePhoneLogin(event) {
+      if (this.loginLoading) return
+      this.loginLoading = true
+      try {
+        await loginFromPhoneDetail(event && event.detail)
+        this.loginVisible = false
+        await this.loadRecords()
+      } catch (error) {
+        showError(error && error.message ? error.message : "登录失败")
+      } finally {
+        this.loginLoading = false
+      }
     },
     goToHome() {
       uni.reLaunch({ url: "/pages/home/index" })

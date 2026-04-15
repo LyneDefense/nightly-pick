@@ -17,7 +17,7 @@
         <view class="avatar">{{ avatarText }}</view>
         <view class="profile-copy">
           <text class="profile-name">{{ user ? user.nickname : "林舒" }}</text>
-          <text class="profile-mail">lin.shu@example.com</text>
+          <text class="profile-mail">{{ user && user.phone ? user.phone : "未登录" }}</text>
           <button class="profile-link" @click="showProfileTip">编辑个人资料</button>
         </view>
       </view>
@@ -66,7 +66,7 @@
 
       <view class="group-block">
         <text class="group-label">数据安全</text>
-        <button class="danger-card logout">退出登录</button>
+        <button class="danger-card logout" @click="handleLogout">退出登录</button>
         <button class="danger-card" @click="handleClearHistory">清空所有对话记录</button>
       </view>
 
@@ -77,19 +77,32 @@
     </view>
 
     <np-bottom-nav active="settings" />
+    <phone-login-modal
+      :visible="loginVisible"
+      :loading="loginLoading"
+      @phone-login="handlePhoneLogin"
+      @cancel="goToHome"
+    />
   </view>
 </template>
 
 <script>
 import NpBottomNav from "../../components/NpBottomNav.vue"
+import PhoneLoginModal from "../../components/PhoneLoginModal.vue"
 import { clearHistory, getSettings, updateSettings } from "../../services/settings"
 import { appState, setMemories, setRecords, setUser } from "../../stores/app-state"
+import { clearAuthSession, isAuthenticated } from "../../services/session"
+import { loginFromPhoneDetail, restoreAuthState } from "../../utils/auth-flow"
 import { showError, showSuccess } from "../../utils/ui"
 
 export default {
-  components: { NpBottomNav },
+  components: { NpBottomNav, PhoneLoginModal },
   data() {
-    return { state: appState }
+    return {
+      state: appState,
+      loginVisible: false,
+      loginLoading: false,
+    }
   },
   computed: {
     user() {
@@ -101,6 +114,11 @@ export default {
     },
   },
   onShow() {
+    restoreAuthState()
+    if (!isAuthenticated()) {
+      this.loginVisible = true
+      return
+    }
     this.loadData()
   },
   methods: {
@@ -112,6 +130,10 @@ export default {
       }
     },
     async toggleMemory(event) {
+      if (!isAuthenticated()) {
+        this.loginVisible = true
+        return
+      }
       try {
         setUser(await updateSettings(Boolean(event.detail.value)))
       } catch (error) {
@@ -119,6 +141,10 @@ export default {
       }
     },
     async handleClearHistory() {
+      if (!isAuthenticated()) {
+        this.loginVisible = true
+        return
+      }
       try {
         await clearHistory()
         setMemories([])
@@ -127,6 +153,27 @@ export default {
       } catch (error) {
         showError(error && error.message ? error.message : "清空历史失败")
       }
+    },
+    async handlePhoneLogin(event) {
+      if (this.loginLoading) return
+      this.loginLoading = true
+      try {
+        await loginFromPhoneDetail(event && event.detail)
+        this.loginVisible = false
+        await this.loadData()
+      } catch (error) {
+        showError(error && error.message ? error.message : "登录失败")
+      } finally {
+        this.loginLoading = false
+      }
+    },
+    handleLogout() {
+      clearAuthSession()
+      setUser(null)
+      setMemories([])
+      setRecords([])
+      showSuccess("已退出")
+      uni.reLaunch({ url: "/pages/home/index" })
     },
     showProfileTip() {
       showSuccess("个人资料编辑后续开放")

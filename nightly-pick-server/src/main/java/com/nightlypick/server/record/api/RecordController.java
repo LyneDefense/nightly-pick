@@ -42,12 +42,12 @@ public class RecordController {
 
     @GetMapping
     public ApiResponse<List<DailyRecord>> listRecords() {
-        return ApiResponse.ok(dailyRecordStore.listRecords());
+        return ApiResponse.ok(dailyRecordStore.listRecords(userContext.getCurrentUserId()));
     }
 
     @GetMapping("/{recordId}")
     public ApiResponse<DailyRecord> getRecord(@PathVariable String recordId) {
-        return ApiResponse.ok(dailyRecordStore.getRecord(recordId));
+        return ApiResponse.ok(dailyRecordStore.getRecordForUser(recordId, userContext.getCurrentUserId()));
     }
 
     @PostMapping("/{recordId}/share-card")
@@ -55,7 +55,7 @@ public class RecordController {
             @PathVariable String recordId,
             @RequestBody GenerateShareCardRequest request
     ) {
-        DailyRecord record = dailyRecordStore.getRecord(recordId);
+        DailyRecord record = dailyRecordStore.getRecordForUser(recordId, userContext.getCurrentUserId());
         shareCardRateLimitService.checkAndMark(userContext.getCurrentUserId(), record.id());
         String cardType = request == null || request.cardType() == null || request.cardType().isBlank()
                 ? "today"
@@ -81,12 +81,12 @@ public class RecordController {
             @PathVariable String recordId,
             @RequestBody UpdateRecordRequest request
     ) {
-        return ApiResponse.ok(dailyRecordStore.updateRecord(recordId, request.title(), request.summary()));
+        return ApiResponse.ok(dailyRecordStore.updateRecordForUser(recordId, userContext.getCurrentUserId(), request.title(), request.summary()));
     }
 
     @DeleteMapping("/{recordId}")
     public ApiResponse<Boolean> deleteRecord(@PathVariable String recordId) {
-        dailyRecordStore.deleteRecord(recordId);
+        dailyRecordStore.deleteRecordForUser(recordId, userContext.getCurrentUserId());
         return ApiResponse.ok(true);
     }
 }

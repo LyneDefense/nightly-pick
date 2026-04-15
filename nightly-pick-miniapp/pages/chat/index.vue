@@ -112,10 +112,17 @@
       <button class="send-button" :disabled="loading || !inputValue.trim()" @click="handleSend">➤</button>
       <text class="text-footnote">RECORDING THE WHISPERS OF THE NIGHT</text>
     </view>
+    <phone-login-modal
+      :visible="loginVisible"
+      :loading="loginLoading"
+      @phone-login="handlePhoneLogin"
+      @cancel="goBack"
+    />
   </view>
 </template>
 
 <script>
+import PhoneLoginModal from "../../components/PhoneLoginModal.vue"
 import { createConversation, getActiveConversation, getConversation, requestConversationSummary, sendMessage } from "../../services/conversation"
 import { transcribeAudio, uploadAudio } from "../../services/audio"
 import { generateShareCard, getRecords } from "../../services/records"
@@ -135,6 +142,8 @@ import {
   updateConversationDraft,
 } from "../../stores/app-state"
 import { isCurrentBusinessDate } from "../../utils/business-day"
+import { isAuthenticated } from "../../services/session"
+import { loginFromPhoneDetail, restoreAuthState } from "../../utils/auth-flow"
 import { showError, showSuccess } from "../../utils/ui"
 
 let recorderManager = null
@@ -145,6 +154,7 @@ let summaryPollTimer = null
 let autoSummaryTimer = null
 
 export default {
+  components: { PhoneLoginModal },
   data() {
     return {
       loading: false,
@@ -163,6 +173,8 @@ export default {
       shareCardGenerating: false,
       failedSendState: null,
       readOnlyMode: false,
+      loginVisible: false,
+      loginLoading: false,
       lastReplySignals: {
         dominantMode: "companionship",
         reflectionReadiness: "not_ready",
@@ -336,6 +348,11 @@ export default {
     },
     async initializePage() {
       try {
+        restoreAuthState()
+        if (!isAuthenticated()) {
+          this.loginVisible = true
+          return
+        }
         this.readOnlyMode = this.getRouteReadonly()
         this.syncRingCanvasSize()
         await this.ensureUserSettings()
@@ -401,6 +418,19 @@ export default {
     async ensureUserSettings() {
       if (this.state.user && this.state.user.businessDayResetHour !== undefined && this.state.user.businessDayResetHour !== null) return
       setUser(await getSettings())
+    },
+    async handlePhoneLogin(event) {
+      if (this.loginLoading) return
+      this.loginLoading = true
+      try {
+        await loginFromPhoneDetail(event && event.detail)
+        this.loginVisible = false
+        await this.initializePage()
+      } catch (error) {
+        showError(error && error.message ? error.message : "登录失败")
+      } finally {
+        this.loginLoading = false
+      }
     },
     async restoreConversationIfNeeded() {
       const sessionIdFromRoute = this.getRouteSessionId()

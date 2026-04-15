@@ -1,4 +1,5 @@
 import { API_BASE_URL, MINIAPP_BUILD_STAMP } from "../config"
+import { clearAuthSession, getAccessToken } from "./session"
 import { logError, logInfo } from "../utils/logger"
 
 function buildRequestId() {
@@ -15,6 +16,10 @@ export function request(options) {
   }
   if (options.sessionId) {
     headers["X-Session-Id"] = options.sessionId
+  }
+  const accessToken = getAccessToken()
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`
   }
   logInfo("网络请求", "开始请求接口", {
     buildStamp: MINIAPP_BUILD_STAMP,
@@ -46,6 +51,9 @@ export function request(options) {
           const error = new Error(errorMessage)
           error.statusCode = response.statusCode
           error.responseData = data
+          if (response.statusCode === 401) {
+            clearAuthSession()
+          }
           reject(error)
           return
         }

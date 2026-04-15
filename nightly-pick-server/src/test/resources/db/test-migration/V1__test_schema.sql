@@ -1,9 +1,28 @@
 CREATE TABLE app_user (
     id VARCHAR(64) PRIMARY KEY,
     nickname VARCHAR(255) NOT NULL,
+    phone VARCHAR(32),
+    openid VARCHAR(128),
+    provider VARCHAR(64),
+    avatar_url TEXT,
     allow_memory_reference BOOLEAN NOT NULL DEFAULT TRUE,
-    created_date DATE NOT NULL
+    created_date DATE NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE,
+    last_login_at TIMESTAMP WITH TIME ZONE
 );
+
+CREATE UNIQUE INDEX uk_app_user_phone ON app_user (phone);
+
+CREATE TABLE access_token (
+    token VARCHAR(128) PRIMARY KEY,
+    user_id VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    revoked_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT fk_access_token_user FOREIGN KEY (user_id) REFERENCES app_user (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_access_token_user_created_at ON access_token (user_id, created_at DESC);
 
 CREATE TABLE conversation_session (
     id VARCHAR(64) PRIMARY KEY,

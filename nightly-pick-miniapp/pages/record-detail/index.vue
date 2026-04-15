@@ -59,13 +59,22 @@
         <text class="action-text">删除</text>
       </button>
     </view>
+    <phone-login-modal
+      :visible="loginVisible"
+      :loading="loginLoading"
+      @phone-login="handlePhoneLogin"
+      @cancel="goBack"
+    />
   </view>
 </template>
 
 <script>
+import PhoneLoginModal from "../../components/PhoneLoginModal.vue"
 import { deleteRecord, generateShareCard, getRecord, updateRecord } from "../../services/records"
 import { appState, removeRecord, upsertRecord } from "../../stores/app-state"
 import { getCurrentBusinessDate } from "../../utils/business-day"
+import { isAuthenticated } from "../../services/session"
+import { loginFromPhoneDetail, restoreAuthState } from "../../utils/auth-flow"
 import {
   buildShareCardDraft,
   cacheShareCardDraft,
@@ -74,6 +83,7 @@ import {
 import { showError, showSuccess } from "../../utils/ui"
 
 export default {
+  components: { PhoneLoginModal },
   data() {
     return {
       record: null,
@@ -83,6 +93,8 @@ export default {
       showAllOpenLoops: false,
       shareCardGenerating: false,
       shareCardVersion: 0,
+      loginVisible: false,
+      loginLoading: false,
       state: appState,
     }
   },
@@ -142,6 +154,11 @@ export default {
     },
   },
   onShow() {
+    restoreAuthState()
+    if (!isAuthenticated()) {
+      this.loginVisible = true
+      return
+    }
     this.shareCardVersion = Date.now()
     const pages = getCurrentPages()
     const currentPage = pages[pages.length - 1]
@@ -167,6 +184,20 @@ export default {
         upsertRecord(this.record)
       } catch (error) {
         showError(error && error.message ? error.message : "加载记录失败")
+      }
+    },
+    async handlePhoneLogin(event) {
+      if (this.loginLoading) return
+      this.loginLoading = true
+      try {
+        await loginFromPhoneDetail(event && event.detail)
+        this.loginVisible = false
+        this.currentRecordId = ""
+        this.onShow()
+      } catch (error) {
+        showError(error && error.message ? error.message : "登录失败")
+      } finally {
+        this.loginLoading = false
       }
     },
     async handleSave() {
