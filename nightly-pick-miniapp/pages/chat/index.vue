@@ -77,21 +77,12 @@
           <view class="keyboard-bottom"></view>
         </view>
       </button>
-      <view class="voice-anchor">
-        <view class="voice-record-stack">
-          <view class="recording-hint">{{ recordingHint }}</view>
-          <view :class="['mic-progress-ring', { recording: isRecording }]">
-            <canvas
-              canvas-id="recording-progress-ring"
-              class="mic-progress-canvas"
-              :style="ringCanvasInlineStyle"
-              :width="ringCanvasSizePx"
-              :height="ringCanvasSizePx"
-            ></canvas>
-            <button :class="['mic-button', { recording: isRecording }]" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
-              <text class="mic-icon">{{ isRecording ? recordingCountdownLabel : "●" }}</text>
-            </button>
-          </view>
+      <view class="voice-shell">
+        <view class="recording-hint">{{ recordingHint }}</view>
+        <view :class="['mic-progress-ring', { recording: isRecording }]" :style="recordingRingStyle">
+          <button :class="['mic-button', { recording: isRecording }]" @longpress.prevent="startRecording" @touchend.prevent="stopRecording" @touchcancel.prevent="stopRecording">
+            <text class="mic-icon">{{ isRecording ? recordingCountdownLabel : "●" }}</text>
+          </button>
         </view>
       </view>
     </view>
@@ -161,7 +152,6 @@ export default {
       recordingHint: "长按说话，最多 20 秒",
       recordingElapsedMs: 0,
       recordingMaxDurationMs: 20000,
-      ringCanvasSizePx: 156,
       recorderReady: false,
       defaultTime: "22:14",
       scrollTarget: "message-anchor",
@@ -221,10 +211,11 @@ export default {
       const remainingMs = Math.max(0, this.recordingMaxDurationMs - this.recordingElapsedMs)
       return `${Math.max(1, Math.ceil(remainingMs / 1000))}`
     },
-    ringCanvasInlineStyle() {
+    recordingRingStyle() {
+      const percent = Math.max(0, Math.min(100, this.recordingProgressPercent))
+      const angle = (percent / 100) * 360
       return {
-        width: `${this.ringCanvasSizePx}px`,
-        height: `${this.ringCanvasSizePx}px`,
+        backgroundImage: `conic-gradient(#21473d 0deg ${angle}deg, rgba(33, 71, 61, 0.16) ${angle}deg 360deg)`,
       }
     },
     userHasSpoken: {
@@ -332,9 +323,6 @@ export default {
     this.initializePage()
   },
   mounted() {
-    this.$nextTick(() => {
-      this.drawRecordingRing(0)
-    })
   },
   async onUnload() {
     this.stopRecording({ force: true })
@@ -353,7 +341,6 @@ export default {
           return
         }
         this.readOnlyMode = this.getRouteReadonly()
-        this.syncRingCanvasSize()
         await this.ensureUserSettings()
         if (this.sessionId && !isCurrentBusinessDate(this.state.activeSessionStartedAt, this.businessDayResetHour)) {
           clearActiveConversation()
@@ -367,16 +354,9 @@ export default {
           this.startSummaryStatusPolling(false)
         }
         this.bumpScroll()
-        this.$nextTick(() => {
-          this.drawRecordingRing(this.recordingProgressPercent)
-        })
       } catch (error) {
         showError(error && error.message ? error.message : "初始化会话失败")
       }
-    },
-    syncRingCanvasSize() {
-      const systemInfo = uni.getSystemInfoSync()
-      this.ringCanvasSizePx = Math.round((systemInfo.windowWidth * 156) / 750)
     },
     setupRecorder() {
       if (this.recorderReady) return
@@ -401,13 +381,11 @@ export default {
           showError(error && error.message ? error.message : "语音处理失败")
         } finally {
           this.recordingHint = "长按说话，最多 20 秒"
-          this.drawRecordingRing(0)
         }
       })
       recorderManager.onError((error) => {
         this.finishRecordingSession()
         this.recordingHint = "长按说话，最多 20 秒"
-        this.drawRecordingRing(0)
         console.error("[nightly-pick][recorder] error", error)
         const errorMessage = error && error.errMsg ? `录音失败：${error.errMsg}` : "录音失败，请稍后重试"
         showError(errorMessage)
@@ -585,7 +563,6 @@ export default {
       this.isRecording = true
       this.recordingHint = "松开发送，20 秒后自动发出"
       this.recordingElapsedMs = 0
-      this.drawRecordingRing(0)
       this.startRecordingProgress()
       recorderManager.start({
         duration: this.recordingMaxDurationMs,
@@ -598,7 +575,6 @@ export default {
       if (!recorderManager || !this.isRecording) return
       this.isRecording = false
       this.recordingHint = "正在整理这段语音..."
-      this.drawRecordingRing(0)
       if (force) {
         this.finishRecordingSession()
       }
@@ -609,7 +585,6 @@ export default {
       recordingProgressTimer = setInterval(() => {
         const nextElapsed = Math.min(this.recordingElapsedMs + 100, this.recordingMaxDurationMs)
         this.recordingElapsedMs = nextElapsed
-        this.drawRecordingRing(this.recordingProgressPercent)
         if (nextElapsed >= this.recordingMaxDurationMs) {
           this.stopRecording()
         }
@@ -622,36 +597,6 @@ export default {
         recordingProgressTimer = null
       }
       this.recordingElapsedMs = 0
-      this.drawRecordingRing(0)
-    },
-    drawRecordingRing(percent = 0) {
-      const context = uni.createCanvasContext("recording-progress-ring", this)
-      const size = this.ringCanvasSizePx
-      const lineWidth = Math.max(6, Math.round(size * 0.064))
-      const center = size / 2
-      const radius = center - lineWidth * 1.2
-      const startAngle = -Math.PI / 2
-      const endAngle = startAngle + Math.PI * 2 * (Math.max(0, Math.min(100, percent)) / 100)
-
-      context.clearRect(0, 0, size, size)
-
-      context.beginPath()
-      context.setLineWidth(lineWidth)
-      context.setStrokeStyle("rgba(33, 71, 61, 0.34)")
-      context.setLineCap("round")
-      context.arc(center, center, radius, 0, Math.PI * 2, false)
-      context.stroke()
-
-      if (percent > 0) {
-        context.beginPath()
-        context.setLineWidth(lineWidth)
-        context.setStrokeStyle("#21473d")
-        context.setLineCap("round")
-        context.arc(center, center, radius, startAngle, endAngle, false)
-        context.stroke()
-      }
-
-      context.draw()
     },
     async handleSummaryAction() {
       if (this.summaryActionLoading || !this.sessionId) return
@@ -1251,25 +1196,25 @@ export default {
   transform: translateY(-50%);
 }
 
-.voice-anchor {
+.voice-shell {
   position: absolute;
   left: 50%;
   top: 50%;
   width: 156rpx;
+  height: 156rpx;
   transform: translate(-50%, -50%);
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 
-.voice-record-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18rpx;
-  width: 156rpx;
-}
-
 .recording-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 18rpx);
+  transform: translateX(-50%);
+  width: 156rpx;
+  text-align: center;
   min-height: 34rpx;
   font-size: 22rpx;
   color: rgba(31, 56, 48, 0.48);
@@ -1285,20 +1230,13 @@ export default {
   box-shadow: inset 0 0 0 2rpx rgba(33, 71, 61, 0.16);
   position: relative;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .mic-progress-ring.recording {
   box-shadow:
     0 0 0 10rpx rgba(33, 71, 61, 0.08),
     0 18rpx 36rpx rgba(31, 56, 48, 0.12);
-}
-
-.mic-progress-canvas {
-  position: absolute;
-  inset: 0;
-  width: 156rpx;
-  height: 156rpx;
-  pointer-events: none;
 }
 
 .mic-button {
