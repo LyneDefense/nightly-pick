@@ -31,13 +31,20 @@ export function getWechatLoginCode() {
 }
 
 export async function loginFromPhoneDetail(detail) {
-  if (!detail || !detail.code) {
-    throw new Error("没有拿到手机号授权")
+  if (!detail) {
+    throw new Error("手机号授权失败")
   }
   const loginCode = await getWechatLoginCode()
+  const hasPhoneCode = Boolean(detail.code)
+  const hasLegacyPayload = Boolean(detail.encryptedData && detail.iv)
+  if (!hasPhoneCode && !hasLegacyPayload) {
+    throw new Error("手机号授权失败")
+  }
   const response = await loginWithWechatPhone({
     loginCode,
-    phoneCode: detail.code,
+    phoneCode: detail.code || "",
+    encryptedData: detail.encryptedData || "",
+    iv: detail.iv || "",
   })
   if (response && response.user) {
     setUser(response.user)

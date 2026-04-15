@@ -12,11 +12,11 @@ export function login(nickname) {
   })
 }
 
-export function loginWithWechatPhone({ loginCode, phoneCode, avatarUrl } = {}) {
+export function loginWithWechatPhone({ loginCode, phoneCode, encryptedData, iv, avatarUrl } = {}) {
   return request({
     url: "/auth/wechat-phone-login",
     method: "POST",
-    data: { loginCode, phoneCode, avatarUrl },
+    data: { loginCode, phoneCode, encryptedData, iv, avatarUrl },
   }).then((response) => {
     setAuthSession(response && response.token, response && response.user)
     return response

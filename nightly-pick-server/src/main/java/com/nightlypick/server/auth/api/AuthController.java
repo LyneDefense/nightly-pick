@@ -39,7 +39,9 @@ public class AuthController {
     public ApiResponse<LoginResponse> loginWithWechatPhone(@RequestBody WechatPhoneLoginRequest request) {
         WechatMiniappClient.WechatLoginIdentity identity = wechatMiniappClient.resolveIdentity(
                 request.loginCode(),
-                request.phoneCode()
+                request.phoneCode(),
+                request.encryptedData(),
+                request.iv()
         );
         UserProfile user = userProfileStore.loginByPhone(
                 identity.phone(),

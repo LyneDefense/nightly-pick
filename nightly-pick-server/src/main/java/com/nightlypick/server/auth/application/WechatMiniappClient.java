@@ -8,11 +8,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.nio.charset.Charset;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Base64;
+import javax.crypto.Cipher;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
@@ -31,15 +37,18 @@ public class WechatMiniappClient {
                 .build();
     }
 
-    public WechatLoginIdentity resolveIdentity(String loginCode, String phoneCode) {
+    public WechatLoginIdentity resolveIdentity(String loginCode, String phoneCode, String encryptedData, String iv) {
         ensureConfigured();
-        String openid = resolveOpenid(loginCode);
-        String phone = resolvePhone(phoneCode);
+        LoginContext context = resolveLoginContext(loginCode);
+        String phone = resolvePhone(phoneCode, encryptedData, iv, context.sessionKey());
+        String openid = context.openid();
         return new WechatLoginIdentity(phone, openid);
     }
 
-    private String resolveOpenid(String loginCode) {
-        if (loginCode == null || loginCode.isBlank()) return null;
+    private LoginContext resolveLoginContext(String loginCode) {
+        if (loginCode == null || loginCode.isBlank()) {
+            return new LoginContext(null, null);
+        }
         String url = "https://api.weixin.qq.com/sns/jscode2session"
                 + "?appid=" + encode(properties.getAppId())
                 + "&secret=" + encode(properties.getSecret())
@@ -47,13 +56,20 @@ public class WechatMiniappClient {
                 + "&grant_type=authorization_code";
         JsonNode response = getJson(url);
         ensureWechatSuccess(response, "微信登录失败");
-        return textOrNull(response, "openid");
+        return new LoginContext(textOrNull(response, "openid"), textOrNull(response, "session_key"));
     }
 
-    private String resolvePhone(String phoneCode) {
-        if (phoneCode == null || phoneCode.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "缺少手机号授权 code");
+    private String resolvePhone(String phoneCode, String encryptedData, String iv, String sessionKey) {
+        if (phoneCode != null && !phoneCode.isBlank()) {
+            return resolvePhoneByCode(phoneCode);
         }
+        if (encryptedData != null && !encryptedData.isBlank() && iv != null && !iv.isBlank()) {
+            return decryptPhone(encryptedData, iv, sessionKey);
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "缺少手机号授权信息");
+    }
+
+    private String resolvePhoneByCode(String phoneCode) {
         String accessToken = fetchWechatAccessToken();
         String url = "https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=" + encode(accessToken);
         JsonNode response = postJson(url, Map.of("code", phoneCode));
@@ -64,6 +80,29 @@ public class WechatMiniappClient {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "微信未返回手机号");
         }
         return phone;
+    }
+
+    private String decryptPhone(String encryptedData, String iv, String sessionKey) {
+        if (sessionKey == null || sessionKey.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "当前微信登录信息不完整");
+        }
+        try {
+            Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            SecretKeySpec keySpec = new SecretKeySpec(Base64.getDecoder().decode(sessionKey), "AES");
+            IvParameterSpec ivSpec = new IvParameterSpec(Base64.getDecoder().decode(iv));
+            cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
+            byte[] decrypted = cipher.doFinal(Base64.getDecoder().decode(encryptedData));
+            JsonNode response = objectMapper.readTree(new String(decrypted, StandardCharsets.UTF_8));
+            JsonNode purePhoneNumber = response.path("purePhoneNumber");
+            if (purePhoneNumber.isMissingNode() || purePhoneNumber.isNull() || purePhoneNumber.asText().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "微信未返回手机号");
+            }
+            return purePhoneNumber.asText();
+        } catch (GeneralSecurityException error) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "微信手机号解密失败", error);
+        } catch (IOException error) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "微信手机号解密结果解析失败", error);
+        }
     }
 
     private String fetchWechatAccessToken() {
@@ -140,5 +179,8 @@ public class WechatMiniappClient {
     }
 
     public record WechatLoginIdentity(String phone, String openid) {
+    }
+
+    private record LoginContext(String openid, String sessionKey) {
     }
 }
