@@ -236,6 +236,17 @@ class ConversationFlowIntegrationTests {
                 .andExpect(jsonPath("$.data.groups[0].key").value("recent7"));
     }
 
+    @Test
+    void shouldFallbackToDemoUserWhenAuthorizationIsMissing() throws Exception {
+        mockMvc.perform(post("/conversations"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sessionId").exists());
+
+        mockMvc.perform(get("/records"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").isArray());
+    }
+
     private String loginAsTestUser() throws Exception {
         String response = mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

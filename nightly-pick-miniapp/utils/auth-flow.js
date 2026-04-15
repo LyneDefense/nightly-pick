@@ -1,5 +1,5 @@
 import { loginWithWechatPhone } from "../services/auth"
-import { getStoredUser, isAuthenticated } from "../services/session"
+import { getStoredUser, isAuthenticated, setAuthSession } from "../services/session"
 import { setUser } from "../stores/app-state"
 import { logError, logInfo, logWarn } from "../utils/logger"
 
@@ -7,8 +7,10 @@ export function restoreAuthState() {
   const user = getStoredUser()
   if (user) {
     setUser(user)
+  } else if (!isAuthenticated()) {
+    setAuthSession("demo-user", null)
   }
-  return Boolean(user && isAuthenticated())
+  return true
 }
 
 export function getWechatLoginCode() {
