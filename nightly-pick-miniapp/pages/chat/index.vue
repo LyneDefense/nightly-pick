@@ -30,29 +30,29 @@
           <view class="typing-dot"></view>
         </view>
 
+        <view v-if="shouldShowInlineCard" class="inline-summary-card">
+          <view class="summary-action-copy">
+            <text class="summary-action-title">{{ inlineCardTitle }}</text>
+            <text class="summary-action-desc">{{ inlineCardDescription }}</text>
+          </view>
+          <button
+            v-if="inlineCardButtonLabel"
+            class="summary-action-button"
+            :disabled="inlineCardLoading"
+            @click="handleInlineCardAction"
+          >
+            {{ inlineCardButtonLabel }}
+          </button>
+          <view v-else class="summary-action-loading">
+            <view class="summary-loading-dot"></view>
+            <view class="summary-loading-dot"></view>
+            <view class="summary-loading-dot"></view>
+          </view>
+        </view>
+
         <view id="message-anchor"></view>
       </view>
     </scroll-view>
-
-    <view v-if="shouldShowInlineCard" class="summary-action-card">
-      <view class="summary-action-copy">
-        <text class="summary-action-title">{{ inlineCardTitle }}</text>
-        <text class="summary-action-desc">{{ inlineCardDescription }}</text>
-      </view>
-      <button
-        v-if="inlineCardButtonLabel"
-        class="summary-action-button"
-        :disabled="inlineCardLoading"
-        @click="handleInlineCardAction"
-      >
-        {{ inlineCardButtonLabel }}
-      </button>
-      <view v-else class="summary-action-loading">
-        <view class="summary-loading-dot"></view>
-        <view class="summary-loading-dot"></view>
-        <view class="summary-loading-dot"></view>
-      </view>
-    </view>
 
     <view v-if="failedSendState" class="send-error-card">
       <view class="send-error-copy">
@@ -1024,12 +1024,9 @@ export default {
   padding: 20rpx 24rpx 420rpx;
 }
 
-.summary-action-card {
-  position: fixed;
-  left: 24rpx;
-  right: 24rpx;
-  bottom: calc(var(--np-safe-bottom) + 198rpx);
-  z-index: 18;
+.inline-summary-card {
+  margin-top: 28rpx;
+  width: 100%;
   padding: 24rpx 24rpx 22rpx;
   border-radius: 28rpx;
   background: rgba(255, 252, 246, 0.96);
@@ -1039,6 +1036,7 @@ export default {
   display: flex;
   align-items: center;
   gap: 18rpx;
+  box-sizing: border-box;
 }
 
 .send-error-card {
@@ -1211,6 +1209,7 @@ export default {
   left: 0;
   right: 0;
   bottom: calc(var(--np-safe-bottom) + 22rpx);
+  z-index: 22;
   padding: 0 34rpx;
   display: flex;
   align-items: center;
@@ -1251,6 +1250,7 @@ export default {
   flex: 1;
   display: flex;
   justify-content: center;
+  min-width: 0;
 }
 
 .voice-record-stack {
@@ -1258,6 +1258,7 @@ export default {
   flex-direction: column;
   align-items: center;
   gap: 18rpx;
+  min-width: 0;
 }
 
 .recording-hint {
@@ -1275,6 +1276,7 @@ export default {
   justify-content: center;
   box-shadow: inset 0 0 0 2rpx rgba(33, 71, 61, 0.16);
   position: relative;
+  flex-shrink: 0;
 }
 
 .mic-progress-ring.recording {
