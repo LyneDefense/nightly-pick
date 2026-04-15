@@ -41,14 +41,14 @@ public class UserProfileStore {
     }
 
     public UserProfile loginByPhone(String phone, String openid, String provider, String avatarUrl) {
+        return loginOrCreateByPhone(phone, openid, provider, avatarUrl);
+    }
+
+    public UserProfile loginOrCreateByPhone(String phone, String openid, String provider, String avatarUrl) {
         if (phone == null || phone.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "缺少手机号");
         }
-        UserEntity existing = userMapper.selectOne(
-                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserEntity>()
-                        .eq(UserEntity::getPhone, phone)
-                        .last("LIMIT 1")
-        );
+        UserEntity existing = findByPhone(phone);
         if (existing == null) {
             UserEntity entity = new UserEntity();
             entity.setId("user-" + UUID.randomUUID());
@@ -66,6 +66,17 @@ public class UserProfileStore {
         }
         markLogin(existing, openid, provider, avatarUrl);
         return toDomain(userMapper.selectById(existing.getId()));
+    }
+
+    public UserEntity findByPhone(String phone) {
+        if (phone == null || phone.isBlank()) {
+            return null;
+        }
+        return userMapper.selectOne(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<UserEntity>()
+                        .eq(UserEntity::getPhone, phone)
+                        .last("LIMIT 1")
+        );
     }
 
     public UserProfile getUser(String userId) {

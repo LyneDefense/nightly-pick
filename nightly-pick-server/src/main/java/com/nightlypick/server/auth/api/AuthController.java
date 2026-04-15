@@ -55,7 +55,7 @@ public class AuthController {
         log.info("微信手机号登录已解析 identity phoneSuffix={} hasOpenid={}",
                 maskPhone(identity.phone()),
                 identity.openid() != null && !identity.openid().isBlank());
-        UserProfile user = userProfileStore.loginByPhone(
+        UserProfile user = userProfileStore.loginOrCreateByPhone(
                 identity.phone(),
                 identity.openid(),
                 "wechat_miniapp_phone",
