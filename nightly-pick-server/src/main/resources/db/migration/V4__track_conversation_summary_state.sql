@@ -1,7 +1,13 @@
 ALTER TABLE conversation_session
-    ADD COLUMN user_message_count INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN summarized_user_message_count INTEGER NOT NULL DEFAULT 0,
-    ADD COLUMN summary_job_status VARCHAR(32) NOT NULL DEFAULT 'idle',
+    ADD COLUMN user_message_count INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE conversation_session
+    ADD COLUMN summarized_user_message_count INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE conversation_session
+    ADD COLUMN summary_job_status VARCHAR(32) NOT NULL DEFAULT 'idle';
+
+ALTER TABLE conversation_session
     ADD COLUMN summary_job_target_user_message_count INTEGER NOT NULL DEFAULT 0;
 
 UPDATE conversation_session session

@@ -28,6 +28,13 @@
       }
     },
     {
+      "path": "pages/conversation-history/index",
+      "style": {
+        "navigationStyle": "custom",
+        "backgroundColorTop": "#f2ece0"
+      }
+    },
+    {
       "path": "pages/record-detail/index",
       "style": {
         "navigationStyle": "custom",

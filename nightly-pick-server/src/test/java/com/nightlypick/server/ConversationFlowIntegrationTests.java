@@ -51,7 +51,7 @@ class ConversationFlowIntegrationTests {
                 "https://example.com/audio/reply.mp3",
                 "Chinese (Mandarin)_Warm_Bestie"
         ));
-        given(agentClient.generateRecord(any())).willReturn(new AgentGenerateRecordResponse(
+        given(agentClient.writeReflection(any())).willReturn(new AgentGenerateRecordResponse(
                 "今夜记录",
                 "今天完成了一次完整复盘。",
                 List.of("完成对话"),
@@ -84,7 +84,7 @@ class ConversationFlowIntegrationTests {
 
         mockMvc.perform(post("/conversations/" + sessionId + "/messages")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"text\":\"今天工作很满，但也推进了一点\",\"inputType\":\"text\"}"))
+                        .content("{\"text\":\"今天工作很满，但也推进了一点\",\"inputType\":\"voice\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.assistantReply").value("我记下了，今天最值得保留的瞬间是什么？"))
                 .andExpect(jsonPath("$.data.assistantAudioUrl").value("https://example.com/audio/reply.mp3"));
@@ -132,7 +132,7 @@ class ConversationFlowIntegrationTests {
                 "https://example.com/audio/reply.mp3",
                 "Chinese (Mandarin)_Warm_Bestie"
         ));
-        given(agentClient.generateRecord(any()))
+        given(agentClient.writeReflection(any()))
                 .willReturn(new AgentGenerateRecordResponse(
                         "第一次总结",
                         "今天先记录下上午的疲惫。",
@@ -165,6 +165,11 @@ class ConversationFlowIntegrationTests {
                 .andReturn().getResponse().getContentAsString()
                 .replaceAll(".*\"sessionId\":\"([^\"]+)\".*", "$1");
 
+        mockMvc.perform(post("/conversations/" + sessionId1 + "/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"上午开会很累\",\"inputType\":\"text\"}"))
+                .andExpect(status().isOk());
+
         String firstCompleteResponse = mockMvc.perform(post("/conversations/" + sessionId1 + "/complete"))
                 .andExpect(status().isOk())
                 .andReturn()
@@ -176,6 +181,11 @@ class ConversationFlowIntegrationTests {
         String sessionId2 = mockMvc.perform(post("/conversations"))
                 .andReturn().getResponse().getContentAsString()
                 .replaceAll(".*\"sessionId\":\"([^\"]+)\".*", "$1");
+
+        mockMvc.perform(post("/conversations/" + sessionId2 + "/messages")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"晚上散步后心情缓和\",\"inputType\":\"text\"}"))
+                .andExpect(status().isOk());
 
         String secondCompleteResponse = mockMvc.perform(post("/conversations/" + sessionId2 + "/complete"))
                 .andExpect(status().isOk())
@@ -198,5 +208,24 @@ class ConversationFlowIntegrationTests {
                 .andExpect(jsonPath("$.data[0].emotions[1]").value("平静"));
 
         org.junit.jupiter.api.Assertions.assertEquals(firstRecordId, secondRecordId);
+    }
+
+    @Test
+    void shouldExposeConversationHistoryOnLegacyAndCurrentPaths() throws Exception {
+        mockMvc.perform(post("/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":\"测试用户\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/conversations"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/conversations/history"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groups[0].key").value("recent7"));
+
+        mockMvc.perform(get("/conversations/history/list"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.groups[0].key").value("recent7"));
     }
 }

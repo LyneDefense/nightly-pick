@@ -54,3 +54,10 @@ export function getActiveConversation() {
     method: "GET",
   })
 }
+
+export function getConversationHistory() {
+  return request({
+    url: "/conversations/history/list",
+    method: "GET",
+  })
+}

@@ -45,7 +45,15 @@ class MockTextProvider(TextProvider):
         wants_company = any(keyword in combined_text for keyword in ["睡不着", "陪", "安静", "不太想说", "待一会儿"])
         has_unfinished = any(keyword in combined_text for keyword in ["本来想", "没做", "还没", "挂着", "明天"])
 
-        dominant_mode = "review" if has_review_signal or (has_today_signal and has_unfinished and len(request.history) >= 4) else "sorting" if has_today_signal else "companionship"
+        dominant_mode = (
+            "review"
+            if has_review_signal or (has_today_signal and has_unfinished and len(request.history) >= 4)
+            else "companionship"
+            if wants_company
+            else "sorting"
+            if has_today_signal
+            else "companionship"
+        )
         reflection_readiness = "ready" if dominant_mode == "review" else "light_ready" if dominant_mode == "sorting" or wants_company else "not_ready"
         should_end = dominant_mode == "review"
         stage = "closing" if should_end else ("opening" if len(request.history) < 2 else "exploring")
@@ -62,7 +70,11 @@ class MockTextProvider(TextProvider):
         if request.allow_memory_reference and request.recent_memories:
             memory_hint = f"我还记得你最近提到过“{request.recent_memories[0]}”。"
         closing_hint = "听起来今晚你已经把重要的部分慢慢说出来了，我们先轻轻收在这里。如果你还想补充，我也在。" if should_end else ""
-        sorting_hint = "我记下了。要不要再看看今天哪一块最值得留下？" if dominant_mode == "sorting" and not should_end else ""
+        sorting_hint = (
+            f"我记下了。你说的“{request.user_input}”，好像还悬在今天里面。要不要再看看哪一块最值得留下？"
+            if dominant_mode == "sorting" and not should_end
+            else ""
+        )
         companionship_hint = "我在，你可以先这样安静待着。如果愿意，我们也可以慢慢摸到今天留下来的那一点。" if dominant_mode == "companionship" and not should_end else ""
         return ChatReplyResponse(
             reply_text=(

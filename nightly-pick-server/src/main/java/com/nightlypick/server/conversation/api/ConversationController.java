@@ -54,6 +54,11 @@ public class ConversationController {
         return ApiResponse.ok(conversationFlowService.getActiveConversation());
     }
 
+    @GetMapping({"/history", "/history/list"})
+    public ApiResponse<ConversationHistoryResponse> getConversationHistory() {
+        return ApiResponse.ok(conversationFlowService.getConversationHistory());
+    }
+
     @GetMapping("/{sessionId}")
     public ApiResponse<Map<String, Object>> getConversation(@PathVariable String sessionId) {
         return ApiResponse.ok(conversationFlowService.getConversation(sessionId));

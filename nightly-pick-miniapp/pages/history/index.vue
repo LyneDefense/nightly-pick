@@ -14,6 +14,14 @@
         <text class="history-subtitle">A catalog of your night whispers and lunar dreams.</text>
       </view>
 
+      <button class="conversation-history-entry" @click="goToConversationHistory">
+        <view class="conversation-history-entry-copy">
+          <text class="conversation-history-entry-title">历史对话</text>
+          <text class="conversation-history-entry-desc">回看以前聊过的话</text>
+        </view>
+        <text class="conversation-history-entry-arrow">›</text>
+      </button>
+
       <view class="month-block">
         <view class="month-head">
           <text class="month-number">{{ visibleMonthLabel }}</text>
@@ -130,6 +138,9 @@ export default {
     openDetail(recordId) {
       uni.navigateTo({ url: `/pages/record-detail/index?recordId=${recordId}&source=history` })
     },
+    goToConversationHistory() {
+      uni.navigateTo({ url: "/pages/conversation-history/index" })
+    },
     goToHome() {
       uni.reLaunch({ url: "/pages/home/index" })
     },
@@ -191,6 +202,42 @@ export default {
   font-size: 26rpx;
   line-height: 1.45;
   color: rgba(31, 56, 48, 0.56);
+}
+
+.conversation-history-entry {
+  min-height: 96rpx;
+  margin-top: 34rpx;
+  padding: 18rpx 2rpx 20rpx;
+  border-radius: 0;
+  background: transparent;
+  border-top: 1rpx solid rgba(31, 56, 48, 0.08);
+  border-bottom: 1rpx solid rgba(31, 56, 48, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.conversation-history-entry-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.conversation-history-entry-title {
+  color: #1f3830;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.conversation-history-entry-desc {
+  color: rgba(31, 56, 48, 0.48);
+  font-size: 22rpx;
+}
+
+.conversation-history-entry-arrow {
+  color: rgba(31, 56, 48, 0.32);
+  font-size: 34rpx;
 }
 
 .month-block {

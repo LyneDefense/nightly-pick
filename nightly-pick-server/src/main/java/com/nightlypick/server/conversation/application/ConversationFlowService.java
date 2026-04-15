@@ -4,13 +4,18 @@ import com.nightlypick.server.conversation.application.service.ConversationReply
 import com.nightlypick.server.conversation.application.service.ConversationSummaryAsyncService;
 import com.nightlypick.server.conversation.application.service.RecordGenerationService;
 import com.nightlypick.server.conversation.application.store.ConversationSessionStore;
+import com.nightlypick.server.common.time.BusinessDayClock;
 import com.nightlypick.server.conversation.api.AutosaveConversationResponse;
 import com.nightlypick.server.conversation.api.CompleteConversationResponse;
+import com.nightlypick.server.conversation.api.ConversationHistoryGroupResponse;
+import com.nightlypick.server.conversation.api.ConversationHistoryItemResponse;
+import com.nightlypick.server.conversation.api.ConversationHistoryResponse;
 import com.nightlypick.server.conversation.api.ConversationSummaryStatusResponse;
 import com.nightlypick.server.conversation.api.CreateConversationResponse;
 import com.nightlypick.server.conversation.api.RequestSummaryResponse;
 import com.nightlypick.server.conversation.api.SendMessageRequest;
 import com.nightlypick.server.conversation.api.SendMessageResponse;
+import com.nightlypick.server.conversation.domain.ConversationMessage;
 import com.nightlypick.server.conversation.domain.ConversationSession;
 import com.nightlypick.server.conversation.domain.ConversationSummaryStatus;
 import com.nightlypick.server.conversation.application.store.DailyRecordStore;
@@ -21,6 +26,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -32,6 +40,7 @@ public class ConversationFlowService {
     private final ConversationSummaryAsyncService conversationSummaryAsyncService;
     private final DailyRecordStore dailyRecordStore;
     private final UserContext userContext;
+    private final BusinessDayClock businessDayClock;
 
     public ConversationFlowService(
             ConversationSessionStore conversationSessionStore,
@@ -39,7 +48,8 @@ public class ConversationFlowService {
             RecordGenerationService recordGenerationService,
             ConversationSummaryAsyncService conversationSummaryAsyncService,
             DailyRecordStore dailyRecordStore,
-            UserContext userContext
+            UserContext userContext,
+            BusinessDayClock businessDayClock
     ) {
         this.conversationSessionStore = conversationSessionStore;
         this.conversationReplyService = conversationReplyService;
@@ -47,6 +57,7 @@ public class ConversationFlowService {
         this.conversationSummaryAsyncService = conversationSummaryAsyncService;
         this.dailyRecordStore = dailyRecordStore;
         this.userContext = userContext;
+        this.businessDayClock = businessDayClock;
     }
 
     public CreateConversationResponse createConversation() {
@@ -145,6 +156,44 @@ public class ConversationFlowService {
         );
     }
 
+    public ConversationHistoryResponse getConversationHistory() {
+        String userId = userContext.getCurrentUserId();
+        LocalDate today = recordGenerationService.currentBusinessDate();
+        List<ConversationHistoryItemResponse> recent7Days = new ArrayList<>();
+        List<ConversationHistoryItemResponse> recent30Days = new ArrayList<>();
+        List<ConversationHistoryItemResponse> recentHalfYear = new ArrayList<>();
+        int frozenCount = 0;
+
+        for (ConversationSession session : conversationSessionStore.listSessions(userId)) {
+            LocalDate businessDate = sessionBusinessDate(session);
+            long ageDays = ChronoUnit.DAYS.between(businessDate, today);
+            if (ageDays < 0) {
+                ageDays = 0;
+            }
+            if (ageDays > 183) {
+                frozenCount += 1;
+                continue;
+            }
+            ConversationHistoryItemResponse item = toHistoryItem(session, businessDate);
+            if (ageDays <= 6) {
+                recent7Days.add(item);
+            } else if (ageDays <= 29) {
+                recent30Days.add(item);
+            } else {
+                recentHalfYear.add(item);
+            }
+        }
+
+        return new ConversationHistoryResponse(
+                List.of(
+                        new ConversationHistoryGroupResponse("recent7", "最近 7 天", recent7Days),
+                        new ConversationHistoryGroupResponse("recent30", "最近 30 天", recent30Days),
+                        new ConversationHistoryGroupResponse("recentHalfYear", "最近半年", recentHalfYear)
+                ),
+                frozenCount
+        );
+    }
+
     private ConversationSummaryStatus resolveSummaryStatus(ConversationSession session) {
         LocalDate today = recordGenerationService.currentBusinessDate();
         DailyRecord todayRecord = dailyRecordStore.findRecordByUserAndDate(userContext.getCurrentUserId(), today);
@@ -170,6 +219,34 @@ public class ConversationFlowService {
                 status.recordId(),
                 session == null ? 0 : session.userMessageCount(),
                 session == null ? 0 : session.summarizedUserMessageCount()
+        );
+    }
+
+    private LocalDate sessionBusinessDate(ConversationSession session) {
+        return businessDayClock.toBusinessDate(session.startedAt());
+    }
+
+    private ConversationHistoryItemResponse toHistoryItem(ConversationSession session, LocalDate businessDate) {
+        List<ConversationMessage> messages = conversationSessionStore.getMessages(session.id());
+        String preview = messages.stream()
+                .filter(message -> "user".equals(message.role()))
+                .map(ConversationMessage::text)
+                .filter(text -> text != null && !text.isBlank())
+                .map(String::trim)
+                .findFirst()
+                .orElse("还没有留下内容");
+        if (preview.length() > 42) {
+            preview = preview.substring(0, 42) + "...";
+        }
+        return new ConversationHistoryItemResponse(
+                session.id(),
+                session.status(),
+                businessDate,
+                session.startedAt(),
+                session.endedAt(),
+                messages.size(),
+                session.userMessageCount(),
+                preview
         );
     }
 }

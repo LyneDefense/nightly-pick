@@ -3,7 +3,7 @@
     <view class="chat-topbar">
       <button class="back-button" @click="goBack">‹</button>
       <view class="chat-topbar-copy">
-        <text class="chat-status">正在记录...</text>
+        <text class="chat-status">{{ readOnlyMode ? "历史对话" : "正在记录..." }}</text>
         <text v-if="inputMode === 'text'" class="chat-brand">夜拾</text>
       </view>
       <view class="topbar-spacer"></view>
@@ -62,7 +62,11 @@
       <button v-if="failedSendState.mode === 'retry'" class="send-error-button" :disabled="loading" @click="retryFailedSend">再试一次</button>
     </view>
 
-    <view v-if="inputMode === 'voice'" class="voice-composer">
+    <view v-if="readOnlyMode" class="readonly-composer">
+      <text>这是一段已经收好的历史对话，只能回看。</text>
+    </view>
+
+    <view v-else-if="inputMode === 'voice'" class="voice-composer">
       <button class="mode-switch voice-switch" @click="toggleInputMode">
         <view class="keyboard-icon">
           <view class="keyboard-top">
@@ -158,6 +162,7 @@ export default {
       shareCardPromptVisible: false,
       shareCardGenerating: false,
       failedSendState: null,
+      readOnlyMode: false,
       lastReplySignals: {
         dominantMode: "companionship",
         reflectionReadiness: "not_ready",
@@ -261,6 +266,7 @@ export default {
       return false
     },
     shouldShowInlineCard() {
+      if (this.readOnlyMode) return false
       return this.shouldShowSummaryCard || this.shouldShowShareCardPrompt
     },
     inlineCardTitle() {
@@ -330,15 +336,18 @@ export default {
     },
     async initializePage() {
       try {
+        this.readOnlyMode = this.getRouteReadonly()
         this.syncRingCanvasSize()
         await this.ensureUserSettings()
         if (this.sessionId && !isCurrentBusinessDate(this.state.activeSessionStartedAt, this.businessDayResetHour)) {
           clearActiveConversation()
         }
         await this.restoreConversationIfNeeded()
-        await this.ensureSession()
-        this.setupRecorder()
-        if (this.conversationSummary.status === "recordGenerating") {
+        if (!this.readOnlyMode) {
+          await this.ensureSession()
+          this.setupRecorder()
+        }
+        if (!this.readOnlyMode && this.conversationSummary.status === "recordGenerating") {
           this.startSummaryStatusPolling(false)
         }
         this.bumpScroll()
@@ -419,6 +428,12 @@ export default {
       const options = currentPage && currentPage.options ? currentPage.options : {}
       return options.sessionId ? String(options.sessionId) : ""
     },
+    getRouteReadonly() {
+      const pages = getCurrentPages()
+      const currentPage = pages[pages.length - 1]
+      const options = currentPage && currentPage.options ? currentPage.options : {}
+      return options.readonly === "1" || options.readOnly === "1"
+    },
     async loadConversation(sessionId) {
       const response = await getConversation(sessionId)
       if (!response || !response.session) return
@@ -427,6 +442,9 @@ export default {
         this.normalizeConversationMessages(response.messages),
         response.summaryStatus
       )
+      if (!isCurrentBusinessDate(response.session.startedAt, this.businessDayResetHour)) {
+        this.readOnlyMode = true
+      }
     },
     async ensureSession() {
       if (this.sessionId) return
@@ -435,6 +453,7 @@ export default {
       setConversationSummary(response.summaryStatus)
     },
     async handleSend(inputTypeOverride, explicitText) {
+      if (this.readOnlyMode) return
       const draftText = typeof explicitText === "string" ? explicitText : this.inputValue
       if (!draftText.trim() || this.loading) return
       await this.ensureSession()
@@ -529,6 +548,7 @@ export default {
       }
     },
     async startRecording() {
+      if (this.readOnlyMode) return
       if (!recorderManager || this.isRecording || this.loading) return
       const permissionGranted = await this.ensureRecordPermission()
       if (!permissionGranted) return
@@ -669,6 +689,7 @@ export default {
       })
     },
     toggleInputMode() {
+      if (this.readOnlyMode) return
       if (this.isRecording) return
       this.inputMode = this.inputMode === "voice" ? "text" : "voice"
     },
@@ -866,6 +887,13 @@ export default {
       this.stopRecording({ force: true })
       this.stopAssistantAudio()
       this.clearSummaryTimers()
+      if (this.readOnlyMode) {
+        uni.navigateBack({
+          delta: 1,
+          fail: () => uni.reLaunch({ url: "/pages/home/index" }),
+        })
+        return
+      }
       uni.reLaunch({ url: "/pages/home/index" })
     },
     normalizeConversationMessages(messages) {
@@ -1157,6 +1185,21 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.readonly-composer {
+  position: fixed;
+  left: 32rpx;
+  right: 32rpx;
+  bottom: calc(var(--np-safe-bottom) + 28rpx);
+  z-index: 20;
+  padding: 22rpx 24rpx;
+  border-radius: 8rpx;
+  background: rgba(31, 56, 48, 0.06);
+  color: rgba(31, 56, 48, 0.56);
+  font-size: 24rpx;
+  line-height: 1.45;
+  text-align: center;
 }
 
 .mode-switch,

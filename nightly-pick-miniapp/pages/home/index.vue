@@ -30,6 +30,14 @@
           </button>
         </view>
 
+        <button class="conversation-history-link" @click="goToConversationHistory">
+          <view class="conversation-history-copy">
+            <text class="conversation-history-title">历史对话</text>
+            <text class="conversation-history-desc">回看以前聊过的话</text>
+          </view>
+          <text class="conversation-history-arrow">›</text>
+        </button>
+
         <view class="memory-card" @click="openLatestRecord">
           <view class="memory-head">
             <text class="memory-head-icon">✦</text>
@@ -142,6 +150,9 @@ export default {
     goToChat() {
       const url = this.hasActiveConversation ? `/pages/chat/index?sessionId=${this.state.activeSessionId}` : "/pages/chat/index"
       uni.navigateTo({ url })
+    },
+    goToConversationHistory() {
+      uni.navigateTo({ url: "/pages/conversation-history/index" })
     },
     openLatestRecord() {
       if (!this.latestRecord) {
@@ -305,6 +316,42 @@ export default {
 .hero-cta-label {
   font-size: 28rpx;
   letter-spacing: 2rpx;
+}
+
+.conversation-history-link {
+  min-height: 96rpx;
+  margin: 0 32rpx 18rpx;
+  padding: 18rpx 2rpx 20rpx;
+  border-radius: 0;
+  background: transparent;
+  border-top: 1rpx solid rgba(31, 56, 48, 0.08);
+  border-bottom: 1rpx solid rgba(31, 56, 48, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.conversation-history-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.conversation-history-title {
+  color: #1f3830;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.conversation-history-desc {
+  color: rgba(31, 56, 48, 0.46);
+  font-size: 22rpx;
+}
+
+.conversation-history-arrow {
+  color: rgba(31, 56, 48, 0.32);
+  font-size: 34rpx;
 }
 
 .memory-card {

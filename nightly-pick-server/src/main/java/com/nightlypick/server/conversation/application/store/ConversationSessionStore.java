@@ -90,6 +90,16 @@ public class ConversationSessionStore {
         return session;
     }
 
+    public List<ConversationSession> listSessions(String userId) {
+        return sessionMapper.selectList(
+                        new LambdaQueryWrapper<ConversationSessionEntity>()
+                                .eq(ConversationSessionEntity::getUserId, userId)
+                                .orderByDesc(ConversationSessionEntity::getStartedAt)
+                ).stream()
+                .map(this::toDomain)
+                .toList();
+    }
+
     public void completeSession(String sessionId) {
         ConversationSession session = getSession(sessionId);
         ConversationSessionEntity entity = new ConversationSessionEntity();
