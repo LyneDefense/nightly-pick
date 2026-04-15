@@ -77,7 +77,7 @@
           <view class="keyboard-bottom"></view>
         </view>
       </button>
-      <view class="voice-center">
+      <view class="voice-anchor">
         <view class="voice-record-stack">
           <view class="recording-hint">{{ recordingHint }}</view>
           <view :class="['mic-progress-ring', { recording: isRecording }]">
@@ -94,7 +94,6 @@
           </view>
         </view>
       </view>
-      <view class="voice-right-placeholder"></view>
     </view>
 
     <view v-else class="text-composer">
@@ -1210,10 +1209,9 @@ export default {
   right: 0;
   bottom: calc(var(--np-safe-bottom) + 22rpx);
   z-index: 22;
+  height: 228rpx;
   padding: 0 34rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  box-sizing: border-box;
 }
 
 .readonly-composer {
@@ -1246,11 +1244,21 @@ export default {
   box-shadow: 0 8rpx 20rpx rgba(31, 56, 48, 0.04);
 }
 
-.voice-center {
-  flex: 1;
+.voice-switch {
+  position: absolute;
+  left: 34rpx;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.voice-anchor {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 156rpx;
+  transform: translate(-50%, -50%);
   display: flex;
   justify-content: center;
-  min-width: 0;
 }
 
 .voice-record-stack {
@@ -1258,7 +1266,7 @@ export default {
   flex-direction: column;
   align-items: center;
   gap: 18rpx;
-  min-width: 0;
+  width: 156rpx;
 }
 
 .recording-hint {
@@ -1316,10 +1324,6 @@ export default {
   color: #fff;
   font-size: 36rpx;
   font-weight: 600;
-}
-
-.voice-right-placeholder {
-  width: 72rpx;
 }
 
 .text-composer {
