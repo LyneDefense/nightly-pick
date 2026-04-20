@@ -5,6 +5,7 @@ import com.nightlypick.server.conversation.application.service.ConversationSumma
 import com.nightlypick.server.conversation.application.service.RecordGenerationService;
 import com.nightlypick.server.conversation.application.store.ConversationSessionStore;
 import com.nightlypick.server.common.time.BusinessDayClock;
+import com.nightlypick.server.common.timing.TimingLogService;
 import com.nightlypick.server.conversation.api.AutosaveConversationResponse;
 import com.nightlypick.server.conversation.api.CompleteConversationResponse;
 import com.nightlypick.server.conversation.api.ConversationHistoryGroupResponse;
@@ -41,6 +42,7 @@ public class ConversationFlowService {
     private final DailyRecordStore dailyRecordStore;
     private final UserContext userContext;
     private final BusinessDayClock businessDayClock;
+    private final TimingLogService timingLogService;
 
     public ConversationFlowService(
             ConversationSessionStore conversationSessionStore,
@@ -49,7 +51,8 @@ public class ConversationFlowService {
             ConversationSummaryAsyncService conversationSummaryAsyncService,
             DailyRecordStore dailyRecordStore,
             UserContext userContext,
-            BusinessDayClock businessDayClock
+            BusinessDayClock businessDayClock,
+            TimingLogService timingLogService
     ) {
         this.conversationSessionStore = conversationSessionStore;
         this.conversationReplyService = conversationReplyService;
@@ -58,6 +61,7 @@ public class ConversationFlowService {
         this.dailyRecordStore = dailyRecordStore;
         this.userContext = userContext;
         this.businessDayClock = businessDayClock;
+        this.timingLogService = timingLogService;
     }
 
     public CreateConversationResponse createConversation() {
@@ -65,6 +69,7 @@ public class ConversationFlowService {
         ConversationSession session = conversationSessionStore.findActiveSession(userContext.getCurrentUserId());
         if (session == null) {
             session = conversationSessionStore.createSession(userContext.getCurrentUserId());
+            timingLogService.conversationBegin(session.id(), businessDayClock.toBusinessDate(session.startedAt()), session.userId());
             log.info("已创建新的对话会话 sessionId={} status={}", session.id(), session.status());
         } else {
             log.info("已复用当前活跃会话 sessionId={} status={}", session.id(), session.status());

@@ -1,5 +1,5 @@
 <configuration>
-    <springProperty scope="context" name="TIMING_LOG_PATH" source="server.timing-log-path" defaultValue="/app/logs/timing.log"/>
+    <springProperty scope="context" name="CONVERSATION_LOG_PATH" source="server.conversation-log-path" defaultValue="/app/logs/conversation-events.jsonl"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -7,19 +7,16 @@
         </encoder>
     </appender>
 
-    <appender name="TIMING_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${TIMING_LOG_PATH}</file>
+    <appender name="CONVERSATION_FILE" class="ch.qos.logback.core.FileAppender">
+        <file>${CONVERSATION_LOG_PATH}</file>
+        <append>true</append>
         <encoder>
             <pattern>%msg%n</pattern>
         </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-            <fileNamePattern>${TIMING_LOG_PATH}.%d{yyyy-MM-dd}.gz</fileNamePattern>
-            <maxHistory>30</maxHistory>
-        </rollingPolicy>
     </appender>
 
-    <logger name="com.nightlypick.server.timing" level="INFO" additivity="false">
-        <appender-ref ref="TIMING_FILE"/>
+    <logger name="com.nightlypick.server.conversation.event" level="INFO" additivity="false">
+        <appender-ref ref="CONVERSATION_FILE"/>
     </logger>
 
     <root level="INFO">

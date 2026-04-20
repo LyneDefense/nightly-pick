@@ -23,25 +23,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger("nightly-pick-agent")
 request_logger = logging.getLogger("nightly-pick-agent.request")
-timing_logger = logging.getLogger("nightly-pick-agent.timing")
+conversation_logger = logging.getLogger("nightly-pick-agent.conversation")
 
 
-def configure_timing_logging() -> None:
+def configure_conversation_logging() -> None:
     settings = get_settings()
-    log_path = Path(settings.timing_log_path)
+    log_path = Path(settings.conversation_log_path)
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    timing_logger.setLevel(logging.INFO)
-    timing_logger.propagate = False
-    if any(getattr(handler, "baseFilename", None) == str(log_path) for handler in timing_logger.handlers):
+    conversation_logger.setLevel(logging.INFO)
+    conversation_logger.propagate = False
+    if any(getattr(handler, "baseFilename", None) == str(log_path) for handler in conversation_logger.handlers):
         return
     handler = logging.FileHandler(log_path, encoding="utf-8")
     handler.setFormatter(logging.Formatter("%(message)s"))
-    timing_logger.addHandler(handler)
+    conversation_logger.addHandler(handler)
 
 
 @app.on_event("startup")
 def startup() -> None:
-    configure_timing_logging()
+    configure_conversation_logging()
     warmup_dependencies()
     logger.info("夜拾 Agent 启动完成，依赖预热结束。")
 

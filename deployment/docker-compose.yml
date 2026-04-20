@@ -28,7 +28,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./logs/agent:/app/logs
+      - ./logs:/app/logs
     ports:
       - "127.0.0.1:18080:8000"
     healthcheck:
@@ -62,7 +62,7 @@ services:
         condition: service_started
     volumes:
       - audio_data:/app/data/audio
-      - ./logs/server:/app/logs
+      - ./logs:/app/logs
     ports:
       - "127.0.0.1:18081:8080"
     healthcheck:

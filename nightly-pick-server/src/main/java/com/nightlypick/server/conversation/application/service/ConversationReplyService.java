@@ -85,6 +85,7 @@ public class ConversationReplyService {
         String reflectionReadiness = "not_ready";
         String visibleReplyText = "";
         try {
+            timingLogService.turnBegin(sessionId, inputType, request.text());
             long contextStartedAt = System.nanoTime();
             conversationSessionStore.addMessage(sessionId, "user", inputType, request.text());
             List<ConversationMessage> history = conversationSessionStore.getMessages(sessionId);
@@ -177,7 +178,7 @@ public class ConversationReplyService {
             payload.put("errorMessage", errorMessage);
             payload.put("assistantHasAudio", assistantAudioUrl != null && !assistantAudioUrl.isBlank());
             timingLogService.log(
-                    "conversation_turn",
+                    "turn_end",
                     elapsedMs(startedAt),
                     steps,
                     payload
