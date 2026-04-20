@@ -142,14 +142,14 @@ reflection_readiness: not_ready|light_ready|ready
         emit_timing(
             "chat_reply",
             provider="minimax",
-            session_id=request.session_id,
+            sessionId=request.session_id,
             history_count=len(request.history),
             allow_memory_reference=request.allow_memory_reference,
             attempts=attempts,
             prompt_build_ms=prompt_build_ms,
             model_roundtrip_ms=model_roundtrip_ms,
             normalize_ms=normalize_ms,
-            total_ms=round((time.perf_counter() - started_at) * 1000, 2),
+            totalMs=round((time.perf_counter() - started_at) * 1000, 2),
             stage=stage,
             dominant_mode=dominant_mode,
             reflection_readiness=reflection_readiness,
@@ -678,11 +678,11 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
             emit_timing(
                 "speech_transcribe",
                 provider="minimax",
-                session_id=request.session_id,
-                audio_url=request.audio_url,
+                sessionId=request.session_id,
+                audioUrl=request.audio_url,
                 mode="placeholder",
-                total_ms=round((time.perf_counter() - started_at) * 1000, 2),
-                transcript_length=len(transcript),
+                totalMs=round((time.perf_counter() - started_at) * 1000, 2),
+                transcriptLength=len(transcript),
             )
             return TranscribeAudioResponse(
                 transcript_text=f"未配置 MiniMax ASR 接口，当前使用占位转写：{request.audio_url}"
@@ -699,11 +699,11 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
             emit_timing(
                 "speech_transcribe",
                 provider="minimax",
-                session_id=request.session_id,
-                audio_url=request.audio_url,
+                sessionId=request.session_id,
+                audioUrl=request.audio_url,
                 status="timeout",
                 endpoint=self.settings.minimax_asr_endpoint,
-                total_ms=elapsed_ms,
+                totalMs=elapsed_ms,
             )
             raise HTTPException(status_code=504, detail="MiniMax ASR request timed out.") from exc
         except httpx.HTTPError as exc:
@@ -712,12 +712,12 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
             emit_timing(
                 "speech_transcribe",
                 provider="minimax",
-                session_id=request.session_id,
-                audio_url=request.audio_url,
+                sessionId=request.session_id,
+                audioUrl=request.audio_url,
                 status="error",
                 error=str(exc),
                 endpoint=self.settings.minimax_asr_endpoint,
-                total_ms=elapsed_ms,
+                totalMs=elapsed_ms,
             )
             raise HTTPException(status_code=502, detail=f"MiniMax ASR request failed: {exc}") from exc
         elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
@@ -730,11 +730,11 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
         emit_timing(
             "speech_transcribe",
             provider="minimax",
-            session_id=request.session_id,
-            audio_url=request.audio_url,
-            status_code=response.status_code,
-            total_ms=total_ms,
-            transcript_length=len(transcript),
+            sessionId=request.session_id,
+            audioUrl=request.audio_url,
+            statusCode=response.status_code,
+            totalMs=total_ms,
+            transcriptLength=len(transcript),
             endpoint=self.settings.minimax_asr_endpoint,
         )
         return TranscribeAudioResponse(transcript_text=transcript)
@@ -742,6 +742,7 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
     async def synthesize(self, request: SynthesizeSpeechRequest) -> SynthesizeSpeechResponse:
         started_at = time.perf_counter()
         url = f"{self.settings.minimax_speech_base_url}/t2a_v2"
+        session_id = request.session_id or "-"
         headers = {
             "Authorization": f"Bearer {self.settings.minimax_api_key}",
             "Content-Type": "application/json",
@@ -759,9 +760,10 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
             "stream": False,
         }
         logger.info(
-            "开始请求 MiniMax 语音合成 model=%s url=%s textLength=%s voiceId=%s",
+            "开始请求 MiniMax 语音合成 model=%s url=%s sessionId=%s textLength=%s voiceId=%s",
             self.settings.minimax_tts_model,
             url,
+            session_id,
             len(request.text),
             request.voice_id or self.settings.minimax_tts_voice_id,
         )
@@ -770,43 +772,46 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
                 response = await client.post(url, headers=headers, json=payload)
         except httpx.TimeoutException as exc:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
-            logger.error("MiniMax 语音合成超时 elapsedMs=%s", elapsed_ms)
+            logger.error("MiniMax 语音合成超时 sessionId=%s elapsedMs=%s", session_id, elapsed_ms)
             emit_timing(
                 "speech_synthesize",
                 provider="minimax",
-                text_length=len(request.text),
-                voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
+                sessionId=session_id,
+                textLength=len(request.text),
+                voiceId=request.voice_id or self.settings.minimax_tts_voice_id,
                 status="timeout",
                 endpoint=url,
-                total_ms=elapsed_ms,
+                totalMs=elapsed_ms,
             )
             raise HTTPException(status_code=504, detail="MiniMax TTS request timed out.") from exc
         except httpx.HTTPError as exc:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
-            logger.error("MiniMax 语音合成失败 elapsedMs=%s error=%s", elapsed_ms, exc)
+            logger.error("MiniMax 语音合成失败 sessionId=%s elapsedMs=%s error=%s", session_id, elapsed_ms, exc)
             emit_timing(
                 "speech_synthesize",
                 provider="minimax",
-                text_length=len(request.text),
-                voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
+                sessionId=session_id,
+                textLength=len(request.text),
+                voiceId=request.voice_id or self.settings.minimax_tts_voice_id,
                 status="error",
                 error=str(exc),
                 endpoint=url,
-                total_ms=elapsed_ms,
+                totalMs=elapsed_ms,
             )
             raise HTTPException(status_code=502, detail=f"MiniMax TTS request failed: {exc}") from exc
         elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
-        logger.info("MiniMax 语音合成完成 status=%s elapsedMs=%s", response.status_code, elapsed_ms)
+        logger.info("MiniMax 语音合成完成 sessionId=%s status=%s elapsedMs=%s", session_id, response.status_code, elapsed_ms)
         if response.status_code >= 400:
             emit_timing(
                 "speech_synthesize",
                 provider="minimax",
-                text_length=len(request.text),
-                voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
+                sessionId=session_id,
+                textLength=len(request.text),
+                voiceId=request.voice_id or self.settings.minimax_tts_voice_id,
                 status="http_error",
                 endpoint=url,
-                total_ms=total_ms,
-                status_code=response.status_code,
+                totalMs=elapsed_ms,
+                statusCode=response.status_code,
             )
             raise HTTPException(status_code=502, detail=f"MiniMax TTS error: {response.text}")
         data = response.json()
@@ -824,22 +829,24 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
             emit_timing(
                 "speech_synthesize",
                 provider="minimax",
-                text_length=len(request.text),
-                voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
+                sessionId=session_id,
+                textLength=len(request.text),
+                voiceId=request.voice_id or self.settings.minimax_tts_voice_id,
                 status="invalid_response",
                 endpoint=url,
-                total_ms=total_ms,
+                totalMs=elapsed_ms,
             )
             raise HTTPException(status_code=502, detail="MiniMax TTS response format is invalid.")
         total_ms = round((time.perf_counter() - started_at) * 1000, 2)
         emit_timing(
             "speech_synthesize",
             provider="minimax",
-            text_length=len(request.text),
-            voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
-            status_code=response.status_code,
-            total_ms=total_ms,
-            audio_url_type="data_url" if audio_url.startswith("data:audio/") else "remote_url",
+            sessionId=session_id,
+            textLength=len(request.text),
+            voiceId=request.voice_id or self.settings.minimax_tts_voice_id,
+            statusCode=response.status_code,
+            totalMs=total_ms,
+            audioUrlType="data_url" if audio_url.startswith("data:audio/") else "remote_url",
         )
         return SynthesizeSpeechResponse(
             audio_url=audio_url,

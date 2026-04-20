@@ -52,16 +52,19 @@ async def log_requests(request: Request, call_next):
     request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
     session_id = request.headers.get("x-session-id") or "-"
     trace_id = request.headers.get("x-trace-id") or str(uuid.uuid4())
+    business_date = request.headers.get("x-business-date") or "-"
     request.state.request_id = request_id
     request.state.session_id = session_id
     request.state.trace_id = trace_id
-    context_tokens = set_request_context(request_id, session_id, trace_id)
+    request.state.business_date = business_date
+    context_tokens = set_request_context(request_id, session_id, trace_id, business_date)
     started_at = time.perf_counter()
     request_logger.info(
-        "收到请求 requestId=%s sessionId=%s traceId=%s method=%s path=%s contentType=%s body=%s",
+        "收到请求 requestId=%s sessionId=%s traceId=%s businessDate=%s method=%s path=%s contentType=%s body=%s",
         request_id,
         session_id,
         trace_id,
+        business_date,
         request.method,
         request.url.path,
         request.headers.get("content-type"),
@@ -71,10 +74,11 @@ async def log_requests(request: Request, call_next):
         response = await call_next(request)
         elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
         request_logger.info(
-            "请求处理完成 requestId=%s sessionId=%s traceId=%s method=%s path=%s status=%s elapsedMs=%s",
+            "请求处理完成 requestId=%s sessionId=%s traceId=%s businessDate=%s method=%s path=%s status=%s elapsedMs=%s",
             request_id,
             session_id,
             trace_id,
+            business_date,
             request.method,
             request.url.path,
             response.status_code,
@@ -91,10 +95,11 @@ async def log_requests(request: Request, call_next):
 async def handle_validation_error(request: Request, exc: RequestValidationError):
     raw_body = await request.body()
     logger.error(
-        "请求参数校验失败 requestId=%s sessionId=%s traceId=%s path=%s errors=%s body=%s",
+        "请求参数校验失败 requestId=%s sessionId=%s traceId=%s businessDate=%s path=%s errors=%s body=%s",
         getattr(request.state, "request_id", "unknown"),
         getattr(request.state, "session_id", "-"),
         getattr(request.state, "trace_id", "-"),
+        getattr(request.state, "business_date", "-"),
         request.url.path,
         exc.errors(),
         raw_body.decode("utf-8", errors="ignore"),

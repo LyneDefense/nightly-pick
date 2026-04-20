@@ -5,6 +5,10 @@ import com.nightlypick.server.agent.dto.AgentTranscribeAudioRequest;
 import com.nightlypick.server.agent.service.AgentClient;
 import com.nightlypick.server.common.api.ApiResponse;
 import com.nightlypick.server.common.timing.TimingLogService;
+import com.nightlypick.server.conversation.application.store.ConversationSessionStore;
+import com.nightlypick.server.conversation.domain.ConversationSession;
+import com.nightlypick.server.common.time.BusinessDayClock;
+import org.slf4j.MDC;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,11 +28,21 @@ public class AudioController {
 
     private final AgentClient agentClient;
     private final AudioStorageService audioStorageService;
+    private final ConversationSessionStore conversationSessionStore;
+    private final BusinessDayClock businessDayClock;
     private final TimingLogService timingLogService;
 
-    public AudioController(AgentClient agentClient, AudioStorageService audioStorageService, TimingLogService timingLogService) {
+    public AudioController(
+            AgentClient agentClient,
+            AudioStorageService audioStorageService,
+            ConversationSessionStore conversationSessionStore,
+            BusinessDayClock businessDayClock,
+            TimingLogService timingLogService
+    ) {
         this.agentClient = agentClient;
         this.audioStorageService = audioStorageService;
+        this.conversationSessionStore = conversationSessionStore;
+        this.businessDayClock = businessDayClock;
         this.timingLogService = timingLogService;
     }
 
@@ -43,7 +57,9 @@ public class AudioController {
         String audioUrl = null;
         String status = "ok";
         String errorMessage = null;
+        String businessDate = resolveBusinessDate(sessionId);
         try {
+            MDC.put("businessDate", businessDate);
             audioUrl = audioStorageService.store(sessionId, file);
             steps.add(timingLogService.step("store_file", "保存录音文件", elapsedMs(startedAt)));
             return ApiResponse.ok(new AudioUploadResponse(audioUrl));
@@ -53,11 +69,13 @@ public class AudioController {
             throw error;
         } finally {
             payload.put("sessionId", sessionId);
+            payload.put("businessDate", businessDate);
             payload.put("fileSize", file == null ? 0 : file.getSize());
             payload.put("audioUrl", audioUrl);
             payload.put("status", status);
             payload.put("errorMessage", errorMessage);
             timingLogService.log("audio_upload", elapsedMs(startedAt), steps, payload);
+            MDC.remove("businessDate");
         }
     }
 
@@ -69,7 +87,9 @@ public class AudioController {
         String transcriptText = null;
         String status = "ok";
         String errorMessage = null;
+        String businessDate = resolveBusinessDate(request.sessionId());
         try {
+            MDC.put("businessDate", businessDate);
             long agentStartedAt = System.nanoTime();
             var response = agentClient.transcribeAudio(new AgentTranscribeAudioRequest(request.sessionId(), request.audioUrl()));
             steps.add(timingLogService.step("agent_transcribe", "请求 Agent 转写", elapsedMs(agentStartedAt)));
@@ -81,15 +101,22 @@ public class AudioController {
             throw error;
         } finally {
             payload.put("sessionId", request.sessionId());
+            payload.put("businessDate", businessDate);
             payload.put("audioUrl", request.audioUrl());
             payload.put("transcriptLength", transcriptText == null ? 0 : transcriptText.length());
             payload.put("status", status);
             payload.put("errorMessage", errorMessage);
             timingLogService.log("audio_transcribe", elapsedMs(startedAt), steps, payload);
+            MDC.remove("businessDate");
         }
     }
 
     private long elapsedMs(long startedAtNanos) {
         return Math.max(0L, Math.round((System.nanoTime() - startedAtNanos) / 1_000_000.0));
+    }
+
+    private String resolveBusinessDate(String sessionId) {
+        ConversationSession session = conversationSessionStore.getSession(sessionId);
+        return businessDayClock.toBusinessDate(session.startedAt()).toString();
     }
 }

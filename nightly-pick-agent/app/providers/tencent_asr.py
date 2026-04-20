@@ -62,11 +62,11 @@ class TencentASRProvider(SpeechTranscribeProvider):
             emit_timing(
                 "speech_transcribe",
                 provider="tencent",
-                session_id=request.session_id,
-                audio_url=request.audio_url,
+                sessionId=request.session_id,
+                audioUrl=request.audio_url,
                 status="error",
                 error=str(exc),
-                total_ms=elapsed_ms,
+                totalMs=elapsed_ms,
             )
             raise HTTPException(status_code=502, detail=f"腾讯云 ASR 请求失败: {exc}") from exc
 
@@ -82,21 +82,21 @@ class TencentASRProvider(SpeechTranscribeProvider):
             emit_timing(
                 "speech_transcribe",
                 provider="tencent",
-                session_id=request.session_id,
-                audio_url=request.audio_url,
+                sessionId=request.session_id,
+                audioUrl=request.audio_url,
                 status="empty",
-                total_ms=elapsed_ms,
+                totalMs=elapsed_ms,
             )
             raise HTTPException(status_code=502, detail="腾讯云 ASR 未返回有效转写结果")
         emit_timing(
             "speech_transcribe",
             provider="tencent",
-            session_id=request.session_id,
-            audio_url=request.audio_url,
+            sessionId=request.session_id,
+            audioUrl=request.audio_url,
             status="ok",
-            total_ms=elapsed_ms,
-            transcript_length=len(transcript),
-            request_id=response.RequestId,
+            totalMs=elapsed_ms,
+            transcriptLength=len(transcript),
+            requestId=response.RequestId,
         )
         return TranscribeAudioResponse(transcript_text=transcript)
 

@@ -107,6 +107,7 @@ public class HttpAgentClient implements AgentClient {
                     .header("X-Request-Id", requestId)
                     .header("X-Session-Id", sessionId == null ? "-" : sessionId)
                     .header("X-Trace-Id", Objects.requireNonNullElse(MDC.get("traceId"), requestId))
+                    .header("X-Business-Date", Objects.requireNonNullElse(MDC.get("businessDate"), "-"))
                     .POST(HttpRequest.BodyPublishers.ofString(body))
                     .build();
 

@@ -149,6 +149,10 @@ let assistantAudioFilePath = ""
 let summaryPollTimer = null
 let autoSummaryTimer = null
 
+function buildTurnTraceId(flow) {
+  return `turn-${flow}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
 export default {
   components: { PhoneLoginModal },
   data() {
@@ -162,6 +166,7 @@ export default {
       recordingElapsedMs: 0,
       recordingMaxDurationMs: 20000,
       recorderReady: false,
+      currentTurnTraceId: "",
       defaultTime: "22:14",
       scrollTarget: "message-anchor",
       inputMode: "voice",
@@ -342,6 +347,11 @@ export default {
     bubbleClass(message) {
       return message.role === "assistant" ? "bubble-mint" : "bubble-paper"
     },
+    beginTurnTraceId(flow) {
+      const traceId = buildTurnTraceId(flow)
+      this.currentTurnTraceId = traceId
+      return traceId
+    },
     async initializePage() {
       try {
         restoreAuthState()
@@ -385,13 +395,14 @@ export default {
           if (!result || !result.tempFilePath) {
             throw new Error("没有拿到录音文件")
           }
+          const traceId = this.beginTurnTraceId("voice")
           await this.ensureSession()
           this.recordingHint = "正在整理这段语音..."
-          const uploaded = await uploadAudio(this.sessionId, result.tempFilePath)
-          const transcript = await transcribeAudio(this.sessionId, uploaded.audioUrl)
+          const uploaded = await uploadAudio(this.sessionId, result.tempFilePath, traceId)
+          const transcript = await transcribeAudio(this.sessionId, uploaded.audioUrl, traceId)
           const transcriptText = (transcript && transcript.transcriptText ? transcript.transcriptText : "").trim()
           if (transcriptText) {
-            await this.handleSend("voice", transcriptText)
+            await this.handleSend("voice", transcriptText, traceId)
           } else {
             showError("没有识别到有效内容，请再说一次")
           }
@@ -399,6 +410,7 @@ export default {
           showError(error && error.message ? error.message : "语音处理失败")
         } finally {
           this.recordingHint = "长按说话，最多 20 秒"
+          this.currentTurnTraceId = ""
         }
       })
       recorderManager.onError((error) => {
@@ -406,6 +418,7 @@ export default {
         this.recordingHint = "长按说话，最多 20 秒"
         this.recordingStarting = false
         this.recordingStopQueued = false
+        this.currentTurnTraceId = ""
         console.error("[nightly-pick][recorder] error", error)
         const errorMessage = error && error.errMsg ? `录音失败：${error.errMsg}` : "录音失败，请稍后重试"
         showError(errorMessage)
@@ -479,10 +492,11 @@ export default {
       this.sessionId = response.sessionId
       setConversationSummary(response.summaryStatus)
     },
-    async handleSend(inputTypeOverride, explicitText) {
+    async handleSend(inputTypeOverride, explicitText, traceIdOverride = "") {
       if (this.readOnlyMode) return
       const draftText = typeof explicitText === "string" ? explicitText : this.inputValue
       if (!draftText.trim() || this.loading) return
+      const traceId = traceIdOverride || this.currentTurnTraceId || this.beginTurnTraceId(inputTypeOverride || this.inputMode || "text")
       await this.ensureSession()
       this.clearAutoSummaryTimer()
       this.loading = true
@@ -497,7 +511,7 @@ export default {
       }
       this.bumpScroll()
       try {
-        const response = await sendMessage(this.sessionId, text, inputType === "voice" ? "voice" : "text")
+        const response = await sendMessage(this.sessionId, text, inputType === "voice" ? "voice" : "text", traceId)
         appendChatMessage({
           role: "assistant",
           text: this.sanitizeAssistantText(response.assistantReply),
@@ -527,6 +541,7 @@ export default {
         showError(error && error.message ? error.message : "发送失败")
       } finally {
         this.loading = false
+        this.currentTurnTraceId = ""
       }
     },
     async retryFailedSend() {
@@ -707,9 +722,19 @@ export default {
         .then((playableUrl) => {
           this.stopAssistantAudio()
           assistantAudioContext = uni.createInnerAudioContext()
-          assistantAudioContext.autoplay = true
-          assistantAudioContext.src = playableUrl
           assistantAudioContext.obeyMuteSwitch = false
+          assistantAudioContext.autoplay = false
+          let didStartPlayback = false
+          const startPlayback = () => {
+            if (!assistantAudioContext || didStartPlayback) return
+            didStartPlayback = true
+            assistantAudioContext.play()
+          }
+          assistantAudioContext.src = playableUrl
+          assistantAudioContext.onCanplay(() => {
+            startPlayback()
+          })
+          startPlayback()
           assistantAudioContext.onError((error) => {
             console.error("[nightly-pick][assistant-audio] error", error)
             showError("语音回复播放失败")

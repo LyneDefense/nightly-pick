@@ -41,6 +41,7 @@ public class TimingLogService {
     public void turnBegin(String sessionId, String inputType, String inputText) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("sessionId", sessionId);
+        payload.put("businessDate", mdcValue("businessDate"));
         payload.put("inputType", inputType);
         payload.put("inputLength", inputText == null ? 0 : inputText.length());
         payload.put("inputPreview", preview(inputText));
@@ -60,6 +61,7 @@ public class TimingLogService {
         record.put("requestId", mdcValue("requestId"));
         record.put("sessionId", mdcValue("sessionId"));
         record.put("traceId", mdcValue("traceId"));
+        record.put("businessDate", mdcValue("businessDate"));
         record.putAll(payload);
         try {
             timingLog.info(objectMapper.writeValueAsString(record));
@@ -70,6 +72,7 @@ public class TimingLogService {
 
     public void log(String event, long totalMs, List<Map<String, Object>> steps, Map<String, Object> payload) {
         Map<String, Object> record = new LinkedHashMap<>(payload);
+        record.put("businessDate", mdcValue("businessDate"));
         record.put("totalMs", totalMs);
         record.put("steps", steps);
         log(event, messageFor(event), record);

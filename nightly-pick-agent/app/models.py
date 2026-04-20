@@ -144,6 +144,7 @@ class TranscribeAudioResponse(CamelModel):
 class SynthesizeSpeechRequest(CamelModel):
     text: str = Field(..., min_length=1)
     voice_id: str | None = None
+    session_id: str | None = None
 
 
 class SynthesizeSpeechResponse(CamelModel):

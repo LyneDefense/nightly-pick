@@ -15,11 +15,13 @@ import com.nightlypick.server.conversation.application.store.UserProfileStore;
 import com.nightlypick.server.conversation.api.SendMessageRequest;
 import com.nightlypick.server.conversation.api.SendMessageResponse;
 import com.nightlypick.server.conversation.domain.ConversationMessage;
+import com.nightlypick.server.conversation.domain.ConversationSession;
 import com.nightlypick.server.common.time.BusinessDayClock;
 import com.nightlypick.server.user.application.UserContext;
 import com.nightlypick.server.user.domain.UserProfile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -84,105 +86,113 @@ public class ConversationReplyService {
         String dominantMode = "companionship";
         String reflectionReadiness = "not_ready";
         String visibleReplyText = "";
+        ConversationSession session = conversationSessionStore.getSession(sessionId);
+        String businessDate = businessDayClock.toBusinessDate(session.startedAt()).toString();
         try {
-            timingLogService.turnBegin(sessionId, inputType, request.text());
-            long contextStartedAt = System.nanoTime();
-            conversationSessionStore.addMessage(sessionId, "user", inputType, request.text());
-            List<ConversationMessage> history = conversationSessionStore.getMessages(sessionId);
-            UserProfile userProfile = userProfileStore.getUser(userId);
-            boolean allowMemoryReference = userProfile.allowMemoryReference();
-            String profileSummary = allowMemoryReference ? memoryStore.buildUserProfileSummary(userId) : null;
-            String emotionalTrendSummary = allowMemoryReference ? memoryStore.buildEmotionalTrendSummary(userId) : null;
-            String strategyHints = allowMemoryReference ? memoryStore.buildConversationStrategyHints(userId, request.text()) : null;
-            List<String> relevantMemories = allowMemoryReference ? memoryStore.listRelevantMemoryContents(userId, request.text(), 3) : List.of();
-            List<String> pendingUnansweredInputs = selectPendingUnansweredInputs(history);
-            long contextElapsedMs = elapsedMs(contextStartedAt);
-            steps.add(timingLogService.step("context_build", "整理上下文", contextElapsedMs));
-            log.info("已整理对话上下文 sessionId={} historyCount={} allowMemoryReference={} relevantMemoryCount={}",
-                    sessionId,
-                    history.size(),
-                    allowMemoryReference,
-                    relevantMemories.size());
+            MDC.put("businessDate", businessDate);
+            try {
+                timingLogService.turnBegin(sessionId, inputType, request.text());
+                long contextStartedAt = System.nanoTime();
+                conversationSessionStore.addMessage(sessionId, "user", inputType, request.text());
+                List<ConversationMessage> history = conversationSessionStore.getMessages(sessionId);
+                UserProfile userProfile = userProfileStore.getUser(userId);
+                boolean allowMemoryReference = userProfile.allowMemoryReference();
+                String profileSummary = allowMemoryReference ? memoryStore.buildUserProfileSummary(userId) : null;
+                String emotionalTrendSummary = allowMemoryReference ? memoryStore.buildEmotionalTrendSummary(userId) : null;
+                String strategyHints = allowMemoryReference ? memoryStore.buildConversationStrategyHints(userId, request.text()) : null;
+                List<String> relevantMemories = allowMemoryReference ? memoryStore.listRelevantMemoryContents(userId, request.text(), 3) : List.of();
+                List<String> pendingUnansweredInputs = selectPendingUnansweredInputs(history);
+                long contextElapsedMs = elapsedMs(contextStartedAt);
+                steps.add(timingLogService.step("context_build", "整理上下文", contextElapsedMs));
+                log.info("已整理对话上下文 sessionId={} historyCount={} allowMemoryReference={} relevantMemoryCount={}",
+                        sessionId,
+                        history.size(),
+                        allowMemoryReference,
+                        relevantMemories.size());
 
-            long agentStartedAt = System.nanoTime();
-            AgentChatReplyResponse reply = agentClient.getChatReply(new AgentChatReplyRequest(
-                    sessionId,
-                    request.text(),
-                    history.stream().map(message -> message.role() + ": " + message.text()).toList(),
-                    pendingUnansweredInputs,
-                    profileSummary,
-                    emotionalTrendSummary,
-                    strategyHints,
-                    relevantMemories,
-                    allowMemoryReference
-            ));
-            long agentElapsedMs = elapsedMs(agentStartedAt);
-            steps.add(timingLogService.step("agent_reply", "请求 Agent 回复", agentElapsedMs));
-            if (reply.replyText() == null || reply.replyText().isBlank()) {
-                log.error("助手回复为空 sessionId={} reply={}", sessionId, reply);
-                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Agent returned empty reply text.");
-            }
-
-            long sanitizeStartedAt = System.nanoTime();
-            visibleReplyText = ConversationTextSanitizer.sanitizeAssistantText(reply.replyText());
-            long sanitizeElapsedMs = elapsedMs(sanitizeStartedAt);
-            steps.add(timingLogService.step("sanitize_reply", "净化回复内容", sanitizeElapsedMs));
-
-            shouldEnd = reply.shouldEnd();
-            stage = reply.stage();
-            dominantMode = reply.dominantMode();
-            reflectionReadiness = reply.reflectionReadiness();
-
-            long persistStartedAt = System.nanoTime();
-            conversationSessionStore.addMessage(sessionId, "assistant", "text", visibleReplyText);
-            long persistElapsedMs = elapsedMs(persistStartedAt);
-            steps.add(timingLogService.step("persist_reply", "写入回复", persistElapsedMs));
-
-            if ("voice".equalsIgnoreCase(inputType)) {
-                long ttsStartedAt = System.nanoTime();
-                try {
-                    AgentSynthesizeSpeechResponse speech = agentClient.synthesizeSpeech(new AgentSynthesizeSpeechRequest(visibleReplyText, null));
-                    assistantAudioUrl = speech.audioUrl();
-                    log.info("助手语音合成成功 sessionId={} hasAudioUrl={}", sessionId, assistantAudioUrl != null && !assistantAudioUrl.isBlank());
-                } catch (RuntimeException error) {
-                    log.warn("助手语音合成失败 sessionId={}", sessionId, error);
-                } finally {
-                    long ttsElapsedMs = elapsedMs(ttsStartedAt);
-                    steps.add(timingLogService.step("speech_synthesize", "语音合成", ttsElapsedMs));
+                long agentStartedAt = System.nanoTime();
+                AgentChatReplyResponse reply = agentClient.getChatReply(new AgentChatReplyRequest(
+                        sessionId,
+                        request.text(),
+                        history.stream().map(message -> message.role() + ": " + message.text()).toList(),
+                        pendingUnansweredInputs,
+                        profileSummary,
+                        emotionalTrendSummary,
+                        strategyHints,
+                        relevantMemories,
+                        allowMemoryReference
+                ));
+                long agentElapsedMs = elapsedMs(agentStartedAt);
+                steps.add(timingLogService.step("agent_reply", "请求 Agent 回复", agentElapsedMs));
+                if (reply.replyText() == null || reply.replyText().isBlank()) {
+                    log.error("助手回复为空 sessionId={} reply={}", sessionId, reply);
+                    throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Agent returned empty reply text.");
                 }
-            }
 
-            log.info("用户消息处理完成 sessionId={} elapsedMs={}", sessionId, elapsedMs(startedAt));
-            var todayRecord = dailyRecordStore.findRecordByUserAndDate(userId, businessDayClock.currentBusinessDate());
-            String summaryStatus = todayRecord == null ? "noRecordYet" : "recordNeedsRefresh";
-            return new SendMessageResponse(
-                    sessionId,
-                    request.text(),
-                    visibleReplyText,
-                    assistantAudioUrl,
-                    shouldEnd,
-                    stage,
-                    dominantMode,
-                    reflectionReadiness,
-                    new ConversationSummaryStatusResponse(summaryStatus, todayRecord == null ? null : todayRecord.id(), 0, 0)
-            );
-        } catch (RuntimeException error) {
-            status = "error";
-            errorMessage = error.getMessage();
-            throw error;
+                long sanitizeStartedAt = System.nanoTime();
+                visibleReplyText = ConversationTextSanitizer.sanitizeAssistantText(reply.replyText());
+                long sanitizeElapsedMs = elapsedMs(sanitizeStartedAt);
+                steps.add(timingLogService.step("sanitize_reply", "净化回复内容", sanitizeElapsedMs));
+
+                shouldEnd = reply.shouldEnd();
+                stage = reply.stage();
+                dominantMode = reply.dominantMode();
+                reflectionReadiness = reply.reflectionReadiness();
+
+                long persistStartedAt = System.nanoTime();
+                conversationSessionStore.addMessage(sessionId, "assistant", "text", visibleReplyText);
+                long persistElapsedMs = elapsedMs(persistStartedAt);
+                steps.add(timingLogService.step("persist_reply", "写入回复", persistElapsedMs));
+
+                if ("voice".equalsIgnoreCase(inputType)) {
+                    long ttsStartedAt = System.nanoTime();
+                    try {
+                        AgentSynthesizeSpeechResponse speech = agentClient.synthesizeSpeech(new AgentSynthesizeSpeechRequest(visibleReplyText, null, sessionId));
+                        assistantAudioUrl = speech.audioUrl();
+                        log.info("助手语音合成成功 sessionId={} hasAudioUrl={}", sessionId, assistantAudioUrl != null && !assistantAudioUrl.isBlank());
+                    } catch (RuntimeException error) {
+                        log.warn("助手语音合成失败 sessionId={}", sessionId, error);
+                    } finally {
+                        long ttsElapsedMs = elapsedMs(ttsStartedAt);
+                        steps.add(timingLogService.step("speech_synthesize", "语音合成", ttsElapsedMs));
+                    }
+                }
+
+                log.info("用户消息处理完成 sessionId={} elapsedMs={}", sessionId, elapsedMs(startedAt));
+                var todayRecord = dailyRecordStore.findRecordByUserAndDate(userId, businessDayClock.currentBusinessDate());
+                String summaryStatus = todayRecord == null ? "noRecordYet" : "recordNeedsRefresh";
+                return new SendMessageResponse(
+                        sessionId,
+                        request.text(),
+                        visibleReplyText,
+                        assistantAudioUrl,
+                        shouldEnd,
+                        stage,
+                        dominantMode,
+                        reflectionReadiness,
+                        new ConversationSummaryStatusResponse(summaryStatus, todayRecord == null ? null : todayRecord.id(), 0, 0)
+                );
+            } catch (RuntimeException error) {
+                status = "error";
+                errorMessage = error.getMessage();
+                throw error;
+            } finally {
+                payload.put("inputType", inputType);
+                payload.put("sessionId", sessionId);
+                payload.put("businessDate", businessDate);
+                payload.put("userId", userId);
+                payload.put("status", status);
+                payload.put("errorMessage", errorMessage);
+                payload.put("assistantHasAudio", assistantAudioUrl != null && !assistantAudioUrl.isBlank());
+                timingLogService.log(
+                        "turn_end",
+                        elapsedMs(startedAt),
+                        steps,
+                        payload
+                );
+            }
         } finally {
-            payload.put("inputType", inputType);
-            payload.put("sessionId", sessionId);
-            payload.put("userId", userId);
-            payload.put("status", status);
-            payload.put("errorMessage", errorMessage);
-            payload.put("assistantHasAudio", assistantAudioUrl != null && !assistantAudioUrl.isBlank());
-            timingLogService.log(
-                    "turn_end",
-                    elapsedMs(startedAt),
-                    steps,
-                    payload
-            );
+            MDC.remove("businessDate");
         }
     }
 
