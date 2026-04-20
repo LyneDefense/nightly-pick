@@ -1,33 +1,26 @@
 from functools import lru_cache
 
-from app.config import get_settings
 from app.providers.base import SpeechSynthesizeProvider, SpeechTranscribeProvider, TextProvider
-from app.providers.minimax import MiniMaxSpeechProvider, MiniMaxTextProvider
-from app.providers.mock import MockSpeechProvider, MockTextProvider
-from app.providers.tencent_asr import TencentASRProvider
+from app.providers.registry import ProviderRegistry
+
+
+@lru_cache
+def get_provider_registry() -> ProviderRegistry:
+    from app.config import get_settings
+
+    return ProviderRegistry.build(get_settings())
 
 
 @lru_cache
 def get_text_provider() -> TextProvider:
-    settings = get_settings()
-    if settings.text_provider == "minimax":
-        return MiniMaxTextProvider(settings)
-    return MockTextProvider()
+    return get_provider_registry().text_provider
 
 
 @lru_cache
 def get_speech_transcribe_provider() -> SpeechTranscribeProvider:
-    settings = get_settings()
-    if settings.speech_transcribe_provider == "minimax":
-        return MiniMaxSpeechProvider(settings)
-    if settings.speech_transcribe_provider == "tencent":
-        return TencentASRProvider(settings)
-    return MockSpeechProvider()
+    return get_provider_registry().speech_transcribe_provider
 
 
 @lru_cache
 def get_speech_synthesize_provider() -> SpeechSynthesizeProvider:
-    settings = get_settings()
-    if settings.speech_synthesize_provider == "minimax":
-        return MiniMaxSpeechProvider(settings)
-    return MockSpeechProvider()
+    return get_provider_registry().speech_synthesize_provider
