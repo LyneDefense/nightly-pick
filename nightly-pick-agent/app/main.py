@@ -1,16 +1,19 @@
 import logging
 import time
 import uuid
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
+from app.config import get_settings
 from app.routes.chat import router as chat_router
 from app.routes.health import router as health_router
 from app.routes.memory import router as memory_router
 from app.routes.record import router as record_router
 from app.routes.speech import router as speech_router
+from app.request_context import reset_request_context, set_request_context
 from app.system import warmup_dependencies
 
 app = FastAPI(title="nightly-pick-agent", version="0.2.0")
@@ -20,10 +23,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger("nightly-pick-agent")
 request_logger = logging.getLogger("nightly-pick-agent.request")
+timing_logger = logging.getLogger("nightly-pick-agent.timing")
+
+
+def configure_timing_logging() -> None:
+    settings = get_settings()
+    log_path = Path(settings.timing_log_path)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    timing_logger.setLevel(logging.INFO)
+    timing_logger.propagate = False
+    if any(getattr(handler, "baseFilename", None) == str(log_path) for handler in timing_logger.handlers):
+        return
+    handler = logging.FileHandler(log_path, encoding="utf-8")
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    timing_logger.addHandler(handler)
 
 
 @app.on_event("startup")
 def startup() -> None:
+    configure_timing_logging()
     warmup_dependencies()
     logger.info("夜拾 Agent 启动完成，依赖预热结束。")
 
@@ -33,40 +51,50 @@ async def log_requests(request: Request, call_next):
     raw_body = await request.body()
     request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
     session_id = request.headers.get("x-session-id") or "-"
+    trace_id = request.headers.get("x-trace-id") or str(uuid.uuid4())
     request.state.request_id = request_id
     request.state.session_id = session_id
+    request.state.trace_id = trace_id
+    context_tokens = set_request_context(request_id, session_id, trace_id)
     started_at = time.perf_counter()
     request_logger.info(
-        "收到请求 requestId=%s sessionId=%s method=%s path=%s contentType=%s body=%s",
+        "收到请求 requestId=%s sessionId=%s traceId=%s method=%s path=%s contentType=%s body=%s",
         request_id,
         session_id,
+        trace_id,
         request.method,
         request.url.path,
         request.headers.get("content-type"),
         raw_body.decode("utf-8", errors="ignore"),
     )
-    response = await call_next(request)
-    elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
-    request_logger.info(
-        "请求处理完成 requestId=%s sessionId=%s method=%s path=%s status=%s elapsedMs=%s",
-        request_id,
-        session_id,
-        request.method,
-        request.url.path,
-        response.status_code,
-        elapsed_ms,
-    )
-    response.headers["x-request-id"] = request_id
-    return response
+    try:
+        response = await call_next(request)
+        elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        request_logger.info(
+            "请求处理完成 requestId=%s sessionId=%s traceId=%s method=%s path=%s status=%s elapsedMs=%s",
+            request_id,
+            session_id,
+            trace_id,
+            request.method,
+            request.url.path,
+            response.status_code,
+            elapsed_ms,
+        )
+        response.headers["x-request-id"] = request_id
+        response.headers["x-trace-id"] = trace_id
+        return response
+    finally:
+        reset_request_context(context_tokens)
 
 
 @app.exception_handler(RequestValidationError)
 async def handle_validation_error(request: Request, exc: RequestValidationError):
     raw_body = await request.body()
     logger.error(
-        "请求参数校验失败 requestId=%s sessionId=%s path=%s errors=%s body=%s",
+        "请求参数校验失败 requestId=%s sessionId=%s traceId=%s path=%s errors=%s body=%s",
         getattr(request.state, "request_id", "unknown"),
         getattr(request.state, "session_id", "-"),
+        getattr(request.state, "trace_id", "-"),
         request.url.path,
         exc.errors(),
         raw_body.decode("utf-8", errors="ignore"),

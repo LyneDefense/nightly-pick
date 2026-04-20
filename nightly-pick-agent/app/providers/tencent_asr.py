@@ -12,6 +12,7 @@ from tencentcloud.common.profile.http_profile import HttpProfile
 from app.config import Settings
 from app.models import TranscribeAudioRequest, TranscribeAudioResponse
 from app.providers.base import SpeechTranscribeProvider
+from app.timing import emit_timing
 
 logger = logging.getLogger("nightly-pick-agent.tencent-asr")
 
@@ -58,6 +59,15 @@ class TencentASRProvider(SpeechTranscribeProvider):
         except TencentCloudSDKException as exc:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
             logger.error("腾讯云一句话识别失败 elapsedMs=%s error=%s", elapsed_ms, exc)
+            emit_timing(
+                "speech_transcribe",
+                provider="tencent",
+                session_id=request.session_id,
+                audio_url=request.audio_url,
+                status="error",
+                error=str(exc),
+                total_ms=elapsed_ms,
+            )
             raise HTTPException(status_code=502, detail=f"腾讯云 ASR 请求失败: {exc}") from exc
 
         elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
@@ -69,7 +79,25 @@ class TencentASRProvider(SpeechTranscribeProvider):
             response.RequestId,
         )
         if not transcript:
+            emit_timing(
+                "speech_transcribe",
+                provider="tencent",
+                session_id=request.session_id,
+                audio_url=request.audio_url,
+                status="empty",
+                total_ms=elapsed_ms,
+            )
             raise HTTPException(status_code=502, detail="腾讯云 ASR 未返回有效转写结果")
+        emit_timing(
+            "speech_transcribe",
+            provider="tencent",
+            session_id=request.session_id,
+            audio_url=request.audio_url,
+            status="ok",
+            total_ms=elapsed_ms,
+            transcript_length=len(transcript),
+            request_id=response.RequestId,
+        )
         return TranscribeAudioResponse(transcript_text=transcript)
 
     def _resolve_voice_format(self, audio_url: str) -> str:

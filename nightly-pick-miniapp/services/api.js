@@ -17,6 +17,9 @@ export function request(options) {
   if (options.sessionId) {
     headers["X-Session-Id"] = options.sessionId
   }
+  if (options.traceId) {
+    headers["X-Trace-Id"] = options.traceId
+  }
   const accessToken = getAccessToken()
   if (accessToken) {
     headers.Authorization = `Bearer ${accessToken}`
@@ -24,6 +27,7 @@ export function request(options) {
   logInfo("网络请求", "开始请求接口", {
     buildStamp: MINIAPP_BUILD_STAMP,
     requestId,
+    traceId: options.traceId || null,
     sessionId: options.sessionId || null,
     method: options.method || "GET",
     url: requestUrl,
@@ -40,6 +44,7 @@ export function request(options) {
         logInfo("网络请求", "接口请求完成", {
           buildStamp: MINIAPP_BUILD_STAMP,
           requestId,
+          traceId: options.traceId || null,
           sessionId: options.sessionId || null,
           statusCode: response.statusCode,
           url: requestUrl,
@@ -63,6 +68,7 @@ export function request(options) {
         logError("网络请求", "接口请求失败", {
           buildStamp: MINIAPP_BUILD_STAMP,
           requestId,
+          traceId: options.traceId || null,
           sessionId: options.sessionId || null,
           url: requestUrl,
           elapsedMs: Date.now() - startedAt,

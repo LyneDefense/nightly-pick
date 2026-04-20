@@ -7,11 +7,12 @@ export function createConversation() {
   })
 }
 
-export function sendMessage(sessionId, text, inputType) {
+export function sendMessage(sessionId, text, inputType, traceId) {
   return request({
     url: `/conversations/${sessionId}/messages`,
     method: "POST",
     sessionId,
+    traceId,
     data: { text, inputType: inputType || "text" },
   })
 }

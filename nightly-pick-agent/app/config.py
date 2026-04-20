@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     minimax_tts_voice_id: str = "Chinese (Mandarin)_Warm_Bestie"
     minimax_asr_endpoint: str | None = None
     http_trust_env: bool = True
+    timing_log_path: str = "/app/logs/timing.log"
 
     tencent_asr_secret_id: str | None = None
     tencent_asr_secret_key: str | None = None

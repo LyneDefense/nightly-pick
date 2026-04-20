@@ -22,11 +22,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         String requestId = headerOrDefault(request.getHeader("X-Request-Id"), "req-" + UUID.randomUUID());
         String sessionId = headerOrDefault(request.getHeader("X-Session-Id"), "-");
+        String traceId = headerOrDefault(request.getHeader("X-Trace-Id"), "trace-" + UUID.randomUUID());
         long startedAt = System.currentTimeMillis();
 
         MDC.put("requestId", requestId);
         MDC.put("sessionId", sessionId);
+        MDC.put("traceId", traceId);
         response.setHeader("X-Request-Id", requestId);
+        response.setHeader("X-Trace-Id", traceId);
 
         try {
             log.info("收到请求 method={} uri={} query={} remoteAddr={}",
@@ -43,6 +46,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         } finally {
             MDC.remove("requestId");
             MDC.remove("sessionId");
+            MDC.remove("traceId");
         }
     }
 

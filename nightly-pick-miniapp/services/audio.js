@@ -6,16 +6,17 @@ function buildRequestId() {
   return `miniapp-audio-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-export function transcribeAudio(sessionId, audioUrl) {
+export function transcribeAudio(sessionId, audioUrl, traceId) {
   return request({
     url: "/audio/transcribe",
     method: "POST",
     sessionId,
+    traceId,
     data: { sessionId, audioUrl },
   })
 }
 
-export function uploadAudio(sessionId, filePath) {
+export function uploadAudio(sessionId, filePath, traceId) {
   const requestUrl = `${API_BASE_URL}/audio/upload`
   const requestId = buildRequestId()
   const startedAt = Date.now()
@@ -23,6 +24,7 @@ export function uploadAudio(sessionId, filePath) {
   logInfo("音频上传", "开始上传录音文件", {
     buildStamp: MINIAPP_BUILD_STAMP,
     requestId,
+    traceId: traceId || null,
     sessionId,
     url: requestUrl,
     filePath,
@@ -37,6 +39,7 @@ export function uploadAudio(sessionId, filePath) {
       header: {
         "X-Request-Id": requestId,
         "X-Session-Id": sessionId,
+        ...(traceId ? { "X-Trace-Id": traceId } : {}),
       },
       timeout: 60000,
       success: (response) => {
@@ -47,6 +50,7 @@ export function uploadAudio(sessionId, filePath) {
           logError("音频上传", "解析上传响应失败", {
             buildStamp: MINIAPP_BUILD_STAMP,
             requestId,
+            traceId: traceId || null,
             sessionId,
             url: requestUrl,
             elapsedMs: Date.now() - startedAt,
@@ -60,6 +64,7 @@ export function uploadAudio(sessionId, filePath) {
         logInfo("音频上传", "录音文件上传完成", {
           buildStamp: MINIAPP_BUILD_STAMP,
           requestId,
+          traceId: traceId || null,
           sessionId,
           statusCode: response.statusCode,
           url: requestUrl,
@@ -78,6 +83,7 @@ export function uploadAudio(sessionId, filePath) {
         logError("音频上传", "录音文件上传失败", {
           buildStamp: MINIAPP_BUILD_STAMP,
           requestId,
+          traceId: traceId || null,
           sessionId,
           url: requestUrl,
           elapsedMs: Date.now() - startedAt,

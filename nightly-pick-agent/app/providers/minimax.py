@@ -34,6 +34,7 @@ from app.prompts import (
     REFLECTION_WRITER_PROMPT,
     SHARE_CARD_GENERATION_PROMPT,
 )
+from app.timing import emit_timing
 from app.providers.base import SpeechSynthesizeProvider, SpeechTranscribeProvider, TextProvider
 
 logger = logging.getLogger("nightly-pick-agent.minimax")
@@ -51,6 +52,8 @@ class MiniMaxTextProvider(TextProvider):
         self.settings = settings
 
     async def chat_reply(self, request: ChatReplyRequest) -> ChatReplyResponse:
+        started_at = time.perf_counter()
+        prompt_started_at = time.perf_counter()
         logger.info(
             "开始生成对话回复 sessionId=%s historyCount=%s allowMemoryReference=%s shouldEnd=%s",
             request.session_id,
@@ -117,12 +120,17 @@ reflection_readiness: not_ready|light_ready|ready
             content = item.split(":", 1)[1].strip() if ":" in item else item
             messages.append({"role": role, "content": content})
         messages.append({"role": "user", "content": request.user_input})
-        payload = await self._chat_with_json_retry(messages, request)
+        prompt_build_ms = round((time.perf_counter() - prompt_started_at) * 1000, 2)
+        model_started_at = time.perf_counter()
+        payload, attempts = await self._chat_with_json_retry(messages, request)
+        model_roundtrip_ms = round((time.perf_counter() - model_started_at) * 1000, 2)
+        normalize_started_at = time.perf_counter()
         reply_text = self._sanitize_text(str(payload.get("reply_text", "") or ""))
         stage = self._normalize_stage(payload.get("stage"), request.history)
         dominant_mode = self._normalize_dominant_mode(payload.get("dominant_mode"))
         reflection_readiness = self._normalize_reflection_readiness(payload.get("reflection_readiness"), dominant_mode, stage)
         should_end = bool(payload.get("should_end", False))
+        normalize_ms = round((time.perf_counter() - normalize_started_at) * 1000, 2)
         logger.info(
             "对话回复生成完成 sessionId=%s stage=%s mode=%s readiness=%s replyLength=%s",
             request.session_id,
@@ -130,6 +138,23 @@ reflection_readiness: not_ready|light_ready|ready
             dominant_mode,
             reflection_readiness,
             len(reply_text),
+        )
+        emit_timing(
+            "chat_reply",
+            provider="minimax",
+            session_id=request.session_id,
+            history_count=len(request.history),
+            allow_memory_reference=request.allow_memory_reference,
+            attempts=attempts,
+            prompt_build_ms=prompt_build_ms,
+            model_roundtrip_ms=model_roundtrip_ms,
+            normalize_ms=normalize_ms,
+            total_ms=round((time.perf_counter() - started_at) * 1000, 2),
+            stage=stage,
+            dominant_mode=dominant_mode,
+            reflection_readiness=reflection_readiness,
+            should_end=should_end,
+            reply_length=len(reply_text),
         )
         return ChatReplyResponse(
             reply_text=reply_text,
@@ -139,10 +164,10 @@ reflection_readiness: not_ready|light_ready|ready
             reflection_readiness=reflection_readiness,
         )
 
-    async def _chat_with_json_retry(self, messages: list[dict[str, str]], request: ChatReplyRequest) -> dict:
+    async def _chat_with_json_retry(self, messages: list[dict[str, str]], request: ChatReplyRequest) -> tuple[dict, int]:
         first_content = await self._chat_completion(messages)
         try:
-            return self._parse_chat_payload(first_content, request)
+            return self._parse_chat_payload(first_content, request), 1
         except HTTPException:
             logger.warning("聊天模型首次未返回合法 JSON，准备携带修复提示重试 sessionId=%s", request.session_id)
             retry_messages = [
@@ -160,10 +185,10 @@ reflection_readiness: not_ready|light_ready|ready
             ]
             second_content = await self._chat_completion(retry_messages)
             try:
-                return self._parse_chat_payload(second_content, request)
+                return self._parse_chat_payload(second_content, request), 2
             except HTTPException:
                 logger.warning("聊天模型二次修复后仍未返回合法 JSON，回退为纯文本解析 sessionId=%s", request.session_id)
-                return self._fallback_chat_payload(second_content, request)
+                return self._fallback_chat_payload(second_content, request), 2
 
     def _parse_chat_payload(self, content: str, request: ChatReplyRequest) -> dict:
         try:
@@ -468,6 +493,21 @@ subline: string
         if response.status_code >= 400:
             raise HTTPException(status_code=502, detail=f"MiniMax text error: {response.text}")
         body = response.json()
+        base_resp = body.get("base_resp") if isinstance(body, dict) else None
+        if isinstance(base_resp, dict):
+            status_code = base_resp.get("status_code")
+            status_msg = str(base_resp.get("status_msg", "") or "").strip()
+            if status_code not in (0, "0", None):
+                logger.error(
+                    "MiniMax 文本模型返回业务错误 statusCode=%s statusMsg=%s body=%s",
+                    status_code,
+                    status_msg,
+                    json.dumps(body, ensure_ascii=False),
+                )
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"MiniMax text error: {status_code} {status_msg or 'unknown error'}",
+                )
         content = self._extract_documented_text_content(body)
         if content is not None:
             return self._sanitize_text(content)
@@ -632,13 +672,23 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
         self.settings = settings
 
     async def transcribe(self, request: TranscribeAudioRequest) -> TranscribeAudioResponse:
+        started_at = time.perf_counter()
         if not self.settings.minimax_asr_endpoint:
+            transcript = f"未配置 MiniMax ASR 接口，当前使用占位转写：{request.audio_url}"
+            emit_timing(
+                "speech_transcribe",
+                provider="minimax",
+                session_id=request.session_id,
+                audio_url=request.audio_url,
+                mode="placeholder",
+                total_ms=round((time.perf_counter() - started_at) * 1000, 2),
+                transcript_length=len(transcript),
+            )
             return TranscribeAudioResponse(
                 transcript_text=f"未配置 MiniMax ASR 接口，当前使用占位转写：{request.audio_url}"
             )
         headers = {"Authorization": f"Bearer {self.settings.minimax_api_key}"}
         payload = {"session_id": request.session_id, "audio_url": request.audio_url}
-        started_at = time.perf_counter()
         logger.info("开始请求 MiniMax 语音转写 url=%s audioUrl=%s", self.settings.minimax_asr_endpoint, request.audio_url)
         try:
             async with build_httpx_client(60.0) as client:
@@ -646,10 +696,29 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
         except httpx.TimeoutException as exc:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
             logger.error("MiniMax 语音转写超时 elapsedMs=%s", elapsed_ms)
+            emit_timing(
+                "speech_transcribe",
+                provider="minimax",
+                session_id=request.session_id,
+                audio_url=request.audio_url,
+                status="timeout",
+                endpoint=self.settings.minimax_asr_endpoint,
+                total_ms=elapsed_ms,
+            )
             raise HTTPException(status_code=504, detail="MiniMax ASR request timed out.") from exc
         except httpx.HTTPError as exc:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
             logger.error("MiniMax 语音转写失败 elapsedMs=%s error=%s", elapsed_ms, exc)
+            emit_timing(
+                "speech_transcribe",
+                provider="minimax",
+                session_id=request.session_id,
+                audio_url=request.audio_url,
+                status="error",
+                error=str(exc),
+                endpoint=self.settings.minimax_asr_endpoint,
+                total_ms=elapsed_ms,
+            )
             raise HTTPException(status_code=502, detail=f"MiniMax ASR request failed: {exc}") from exc
         elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
         logger.info("MiniMax 语音转写完成 status=%s elapsedMs=%s", response.status_code, elapsed_ms)
@@ -657,9 +726,21 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
             raise HTTPException(status_code=502, detail=f"MiniMax ASR error: {response.text}")
         data = response.json()
         transcript = data.get("transcript_text") or data.get("text") or ""
+        total_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        emit_timing(
+            "speech_transcribe",
+            provider="minimax",
+            session_id=request.session_id,
+            audio_url=request.audio_url,
+            status_code=response.status_code,
+            total_ms=total_ms,
+            transcript_length=len(transcript),
+            endpoint=self.settings.minimax_asr_endpoint,
+        )
         return TranscribeAudioResponse(transcript_text=transcript)
 
     async def synthesize(self, request: SynthesizeSpeechRequest) -> SynthesizeSpeechResponse:
+        started_at = time.perf_counter()
         url = f"{self.settings.minimax_speech_base_url}/t2a_v2"
         headers = {
             "Authorization": f"Bearer {self.settings.minimax_api_key}",
@@ -677,7 +758,6 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
             },
             "stream": False,
         }
-        started_at = time.perf_counter()
         logger.info(
             "开始请求 MiniMax 语音合成 model=%s url=%s textLength=%s voiceId=%s",
             self.settings.minimax_tts_model,
@@ -691,14 +771,43 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
         except httpx.TimeoutException as exc:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
             logger.error("MiniMax 语音合成超时 elapsedMs=%s", elapsed_ms)
+            emit_timing(
+                "speech_synthesize",
+                provider="minimax",
+                text_length=len(request.text),
+                voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
+                status="timeout",
+                endpoint=url,
+                total_ms=elapsed_ms,
+            )
             raise HTTPException(status_code=504, detail="MiniMax TTS request timed out.") from exc
         except httpx.HTTPError as exc:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
             logger.error("MiniMax 语音合成失败 elapsedMs=%s error=%s", elapsed_ms, exc)
+            emit_timing(
+                "speech_synthesize",
+                provider="minimax",
+                text_length=len(request.text),
+                voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
+                status="error",
+                error=str(exc),
+                endpoint=url,
+                total_ms=elapsed_ms,
+            )
             raise HTTPException(status_code=502, detail=f"MiniMax TTS request failed: {exc}") from exc
         elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
         logger.info("MiniMax 语音合成完成 status=%s elapsedMs=%s", response.status_code, elapsed_ms)
         if response.status_code >= 400:
+            emit_timing(
+                "speech_synthesize",
+                provider="minimax",
+                text_length=len(request.text),
+                voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
+                status="http_error",
+                endpoint=url,
+                total_ms=total_ms,
+                status_code=response.status_code,
+            )
             raise HTTPException(status_code=502, detail=f"MiniMax TTS error: {response.text}")
         data = response.json()
         audio_hex = (data.get("data") or {}).get("audio")
@@ -712,7 +821,26 @@ class MiniMaxSpeechProvider(SpeechTranscribeProvider, SpeechSynthesizeProvider):
         else:
             audio_url = data.get("audio_file") or data.get("audio_url") or data.get("file")
         if not audio_url:
+            emit_timing(
+                "speech_synthesize",
+                provider="minimax",
+                text_length=len(request.text),
+                voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
+                status="invalid_response",
+                endpoint=url,
+                total_ms=total_ms,
+            )
             raise HTTPException(status_code=502, detail="MiniMax TTS response format is invalid.")
+        total_ms = round((time.perf_counter() - started_at) * 1000, 2)
+        emit_timing(
+            "speech_synthesize",
+            provider="minimax",
+            text_length=len(request.text),
+            voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
+            status_code=response.status_code,
+            total_ms=total_ms,
+            audio_url_type="data_url" if audio_url.startswith("data:audio/") else "remote_url",
+        )
         return SynthesizeSpeechResponse(
             audio_url=audio_url,
             voice_id=request.voice_id or self.settings.minimax_tts_voice_id,
