@@ -6,6 +6,7 @@ import com.nightlypick.server.agent.dto.AgentSynthesizeSpeechRequest;
 import com.nightlypick.server.agent.dto.AgentSynthesizeSpeechResponse;
 import com.nightlypick.server.agent.service.AgentClient;
 import com.nightlypick.server.conversation.application.store.ConversationSessionStore;
+import com.nightlypick.server.conversation.application.ConversationTextSanitizer;
 import com.nightlypick.server.conversation.api.ConversationSummaryStatusResponse;
 import com.nightlypick.server.conversation.application.store.MemoryStore;
 import com.nightlypick.server.conversation.application.store.DailyRecordStore;
@@ -87,16 +88,17 @@ public class ConversationReplyService {
             log.error("助手回复为空 sessionId={} reply={}", sessionId, reply);
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Agent returned empty reply text.");
         }
+        String visibleReplyText = ConversationTextSanitizer.sanitizeAssistantText(reply.replyText());
         log.info("助手回复生成完成 sessionId={} stage={} shouldEnd={} replyLength={}",
                 sessionId,
                 reply.stage(),
                 reply.shouldEnd(),
-                reply.replyText().length());
-        conversationSessionStore.addMessage(sessionId, "assistant", "text", reply.replyText());
+                visibleReplyText.length());
+        conversationSessionStore.addMessage(sessionId, "assistant", "text", visibleReplyText);
         String assistantAudioUrl = null;
         if ("voice".equalsIgnoreCase(inputType)) {
             try {
-                AgentSynthesizeSpeechResponse speech = agentClient.synthesizeSpeech(new AgentSynthesizeSpeechRequest(reply.replyText(), null));
+                AgentSynthesizeSpeechResponse speech = agentClient.synthesizeSpeech(new AgentSynthesizeSpeechRequest(visibleReplyText, null));
                 assistantAudioUrl = speech.audioUrl();
                 log.info("助手语音合成成功 sessionId={} hasAudioUrl={}", sessionId, assistantAudioUrl != null && !assistantAudioUrl.isBlank());
             } catch (RuntimeException error) {
@@ -109,7 +111,7 @@ public class ConversationReplyService {
         return new SendMessageResponse(
                 sessionId,
                 request.text(),
-                reply.replyText(),
+                visibleReplyText,
                 assistantAudioUrl,
                 reply.shouldEnd(),
                 reply.stage(),

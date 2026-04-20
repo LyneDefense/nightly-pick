@@ -237,6 +237,39 @@ class ConversationFlowIntegrationTests {
     }
 
     @Test
+    void shouldStripDebugBlocksFromAssistantReplyBeforePersistingAndReturning() throws Exception {
+        given(agentClient.getChatReply(any())).willReturn(new AgentChatReplyResponse(
+                "嗯，听得见。你说，我在。\n<think>\n用户回了一个简单句子。\n</think>\n<minimax:tool_call>\n<parameter>{\"reply_text\":\"这段不该出现\"}</parameter>\n</minimax:tool_call>",
+                false,
+                "exploring",
+                "sorting",
+                "light_ready"
+        ));
+
+        String authorization = loginAsTestUser();
+
+        String sessionId = mockMvc.perform(post("/conversations")
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString()
+                .replaceAll(".*\"sessionId\":\"([^\"]+)\".*", "$1");
+
+        mockMvc.perform(post("/conversations/" + sessionId + "/messages")
+                        .header("Authorization", authorization)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"text\":\"今天有点乱，但我想先说完。\",\"inputType\":\"text\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.assistantReply").value("嗯，听得见。你说，我在。"));
+
+        mockMvc.perform(get("/conversations/" + sessionId)
+                        .header("Authorization", authorization))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.messages[1].text").value("嗯，听得见。你说，我在。"));
+    }
+
+    @Test
     void shouldFallbackToDemoUserWhenAuthorizationIsMissing() throws Exception {
         mockMvc.perform(post("/conversations"))
                 .andExpect(status().isOk())

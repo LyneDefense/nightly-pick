@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.nightlypick.server.conversation.domain.ConversationMessage;
 import com.nightlypick.server.conversation.domain.ConversationSession;
+import com.nightlypick.server.conversation.application.ConversationTextSanitizer;
 import com.nightlypick.server.common.time.BusinessDayClock;
 import com.nightlypick.server.persistence.entity.ConversationMessageEntity;
 import com.nightlypick.server.persistence.entity.ConversationSessionEntity;
@@ -220,7 +221,9 @@ public class ConversationSessionStore {
                 entity.getSessionId(),
                 entity.getRole(),
                 entity.getInputType(),
-                entity.getText(),
+                "assistant".equals(entity.getRole())
+                        ? ConversationTextSanitizer.sanitizeAssistantText(entity.getText())
+                        : entity.getText(),
                 entity.getCreatedAt()
         );
     }
