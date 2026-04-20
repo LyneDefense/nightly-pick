@@ -46,10 +46,25 @@ def build_httpx_client(timeout_seconds: float) -> httpx.AsyncClient:
 
 
 class MiniMaxTextProvider(TextProvider):
+    provider_name = "minimax"
+    provider_display_name = "MiniMax"
+
     def __init__(self, settings: Settings):
-        if not settings.minimax_api_key:
-            raise ValueError("MINIMAX_API_KEY is required when TEXT_PROVIDER=minimax")
         self.settings = settings
+        if not self._text_api_key():
+            raise ValueError(f"{self.provider_name.upper()}_API_KEY is required when TEXT_PROVIDER={self.provider_name}")
+
+    def _text_api_key(self) -> str | None:
+        return self.settings.minimax_api_key
+
+    def _text_base_url(self) -> str:
+        return self.settings.minimax_text_base_url
+
+    def _text_model_name(self) -> str:
+        return self.settings.text_model
+
+    def _text_chat_url(self) -> str:
+        return f"{self._text_base_url().rstrip('/')}/text/chatcompletion_v2"
 
     async def chat_reply(self, request: ChatReplyRequest) -> ChatReplyResponse:
         started_at = time.perf_counter()
@@ -141,7 +156,7 @@ reflection_readiness: not_ready|light_ready|ready
         )
         emit_timing(
             "chat_reply",
-            provider="minimax",
+            provider=self.provider_name,
             sessionId=request.session_id,
             history_count=len(request.history),
             allow_memory_reference=request.allow_memory_reference,
@@ -459,20 +474,21 @@ subline: string
         return ExtractMemoryResponse(short_term_memory=memories)
 
     async def _chat_completion(self, messages: list[dict[str, str]]) -> str:
-        url = f"{self.settings.minimax_text_base_url}/text/chatcompletion_v2"
+        url = self._text_chat_url()
         headers = {
-            "Authorization": f"Bearer {self.settings.minimax_api_key}",
+            "Authorization": f"Bearer {self._text_api_key()}",
             "Content-Type": "application/json",
         }
         payload = {
-            "model": self.settings.text_model,
+            "model": self._text_model_name(),
             "messages": messages,
             "temperature": 0.6,
         }
         started_at = time.perf_counter()
         logger.info(
-            "开始请求 MiniMax 文本模型 model=%s url=%s messageCount=%s lastUserInput=%s",
-            self.settings.text_model,
+            "开始请求 %s 文本模型 model=%s url=%s messageCount=%s lastUserInput=%s",
+            self.provider_display_name,
+            self._text_model_name(),
             url,
             len(messages),
             messages[-1]["content"] if messages else "",
@@ -482,16 +498,16 @@ subline: string
                 response = await client.post(url, headers=headers, json=payload)
         except httpx.TimeoutException as exc:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
-            logger.error("请求 MiniMax 文本模型超时 elapsedMs=%s", elapsed_ms)
-            raise HTTPException(status_code=504, detail="MiniMax text request timed out.") from exc
+            logger.error("请求 %s 文本模型超时 elapsedMs=%s", self.provider_display_name, elapsed_ms)
+            raise HTTPException(status_code=504, detail=f"{self.provider_display_name} text request timed out.") from exc
         except httpx.HTTPError as exc:
             elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
-            logger.error("请求 MiniMax 文本模型失败 elapsedMs=%s error=%s", elapsed_ms, exc)
-            raise HTTPException(status_code=502, detail=f"MiniMax text request failed: {exc}") from exc
+            logger.error("请求 %s 文本模型失败 elapsedMs=%s error=%s", self.provider_display_name, elapsed_ms, exc)
+            raise HTTPException(status_code=502, detail=f"{self.provider_display_name} text request failed: {exc}") from exc
         elapsed_ms = round((time.perf_counter() - started_at) * 1000, 2)
-        logger.info("MiniMax 文本模型响应完成 status=%s elapsedMs=%s", response.status_code, elapsed_ms)
+        logger.info("%s 文本模型响应完成 status=%s elapsedMs=%s", self.provider_display_name, response.status_code, elapsed_ms)
         if response.status_code >= 400:
-            raise HTTPException(status_code=502, detail=f"MiniMax text error: {response.text}")
+            raise HTTPException(status_code=502, detail=f"{self.provider_display_name} text error: {response.text}")
         body = response.json()
         base_resp = body.get("base_resp") if isinstance(body, dict) else None
         if isinstance(base_resp, dict):
@@ -499,20 +515,21 @@ subline: string
             status_msg = str(base_resp.get("status_msg", "") or "").strip()
             if status_code not in (0, "0", None):
                 logger.error(
-                    "MiniMax 文本模型返回业务错误 statusCode=%s statusMsg=%s body=%s",
+                    "%s 文本模型返回业务错误 statusCode=%s statusMsg=%s body=%s",
+                    self.provider_display_name,
                     status_code,
                     status_msg,
                     json.dumps(body, ensure_ascii=False),
                 )
                 raise HTTPException(
                     status_code=502,
-                    detail=f"MiniMax text error: {status_code} {status_msg or 'unknown error'}",
+                    detail=f"{self.provider_display_name} text error: {status_code} {status_msg or 'unknown error'}",
                 )
         content = self._extract_documented_text_content(body)
         if content is not None:
             return self._sanitize_text(content)
-        logger.error("MiniMax 文本模型返回了无法识别的响应格式 body=%s", json.dumps(body, ensure_ascii=False))
-        raise HTTPException(status_code=502, detail="MiniMax text response format is invalid.")
+        logger.error("%s 文本模型返回了无法识别的响应格式 body=%s", self.provider_display_name, json.dumps(body, ensure_ascii=False))
+        raise HTTPException(status_code=502, detail=f"{self.provider_display_name} text response format is invalid.")
 
     @staticmethod
     def _extract_documented_text_content(body: object) -> str | None:

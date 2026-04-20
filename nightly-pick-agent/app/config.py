@@ -8,13 +8,16 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     app_env: str = "development"
-    text_provider: Literal["mock", "minimax"] = "mock"
+    text_provider: Literal["mock", "minimax", "deepseek"] = "mock"
     speech_transcribe_provider: Literal["mock", "minimax", "tencent"] = "mock"
     speech_synthesize_provider: Literal["mock", "minimax"] = "mock"
 
     text_model: str = "MiniMax-M2.5"
     minimax_api_key: str | None = None
     minimax_text_base_url: str = "https://api.minimaxi.com/v1"
+    deepseek_api_key: str | None = None
+    deepseek_text_base_url: str = "https://api.deepseek.com/v1"
+    deepseek_text_model: str = "deepseek-chat"
 
     minimax_speech_base_url: str = "https://api.minimaxi.com/v1"
     minimax_tts_model: str = "speech-2.8-turbo"

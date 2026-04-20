@@ -5,6 +5,7 @@ from typing import Callable, TypeVar
 
 from app.config import Settings
 from app.providers.base import SpeechSynthesizeProvider, SpeechTranscribeProvider, TextProvider
+from app.providers.deepseek import DeepSeekTextProvider
 from app.providers.minimax import MiniMaxSpeechProvider, MiniMaxTextProvider
 from app.providers.mock import MockSpeechProvider, MockTextProvider
 from app.providers.tencent_asr import TencentASRProvider
@@ -18,6 +19,7 @@ ProviderT = TypeVar("ProviderT")
 TEXT_PROVIDER_FACTORIES: dict[str, TextProviderFactory] = {
     "mock": lambda _settings: MockTextProvider(),
     "minimax": lambda settings: MiniMaxTextProvider(settings),
+    "deepseek": lambda settings: DeepSeekTextProvider(settings),
 }
 
 SPEECH_TRANSCRIBE_PROVIDER_FACTORIES: dict[str, SpeechTranscribeProviderFactory] = {

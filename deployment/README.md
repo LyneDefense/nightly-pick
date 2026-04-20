@@ -64,6 +64,22 @@ TENCENT_ASR_REGION=ap-shanghai
 TENCENT_ASR_ENGINE_TYPE=16k_zh
 ```
 
+如果你要用 `DeepSeek 文本 + 腾讯云 ASR + MiniMax TTS`，推荐改成：
+
+```env
+TEXT_PROVIDER=deepseek
+SPEECH_TRANSCRIBE_PROVIDER=tencent
+SPEECH_SYNTHESIZE_PROVIDER=minimax
+DEEPSEEK_API_KEY=your_key
+DEEPSEEK_TEXT_MODEL=deepseek-chat
+MINIMAX_API_KEY=your_minimax_key
+MINIMAX_TTS_VOICE_ID="Chinese (Mandarin)_Warm_Bestie"
+TENCENT_ASR_SECRET_ID=your_secret_id
+TENCENT_ASR_SECRET_KEY=your_secret_key
+TENCENT_ASR_REGION=ap-shanghai
+TENCENT_ASR_ENGINE_TYPE=16k_zh
+```
+
 ## 启动服务
 
 ```bash

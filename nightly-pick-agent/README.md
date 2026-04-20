@@ -27,7 +27,7 @@ curl http://localhost:8000/health
 
 ## Provider Modes
 
-- `TEXT_PROVIDER=mock|minimax`
+- `TEXT_PROVIDER=mock|minimax|deepseek`
 - `SPEECH_TRANSCRIBE_PROVIDER=mock|minimax|tencent`
 - `SPEECH_SYNTHESIZE_PROVIDER=mock|minimax`
 
@@ -51,6 +51,19 @@ MINIMAX_TTS_MODEL=speech-2.8-turbo
 MINIMAX_TTS_VOICE_ID=Chinese (Mandarin)_Warm_Bestie
 ```
 
+When you want to use DeepSeek for text and keep MiniMax for speech:
+
+```env
+TEXT_PROVIDER=deepseek
+SPEECH_TRANSCRIBE_PROVIDER=tencent
+SPEECH_SYNTHESIZE_PROVIDER=minimax
+DEEPSEEK_API_KEY=your_key
+DEEPSEEK_TEXT_MODEL=deepseek-chat
+MINIMAX_API_KEY=your_minimax_key
+MINIMAX_TTS_MODEL=speech-2.8-turbo
+MINIMAX_TTS_VOICE_ID=Chinese (Mandarin)_Warm_Bestie
+```
+
 You can start from `.env.minimax.example`.
 
 For a MiniMax-backed local run:
@@ -63,8 +76,8 @@ cp .env.minimax.example .env
 
 ## Notes
 
-- Text generation is wired for MiniMax text chat.
+- Text generation is provider-based and can be switched between MiniMax and DeepSeek.
 - TTS is wired for MiniMax T2A.
 - ASR currently supports a safe fallback mock path unless you provide a concrete ASR endpoint in `MINIMAX_ASR_ENDPOINT`.
-- The app validates selected providers on startup, so bad MiniMax config will fail fast instead of surfacing only on the first request.
+- The app validates selected providers on startup, so bad provider config will fail fast instead of surfacing only on the first request.
 - For system TTS voices, use a valid official `voice_id`. A safe Chinese default is `Chinese (Mandarin)_Warm_Bestie`.
